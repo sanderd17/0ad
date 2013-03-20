@@ -1,9 +1,6 @@
 var g_IsConnecting = false;
 var g_GameType; // "server" or "client"
-var g_Source; // "mainmenu" or "lobby"
 var g_ServerName = "";
-var g_Name;
-var g_Ip;
 
 var g_IsRejoining = false;
 var g_GameAttributes; // used when rejoining
@@ -11,37 +8,34 @@ var g_PlayerAssignments; // used when rejoining
 
 function init(attribs)
 {
-	g_Source = attribs.source;
         switch (attribs.multiplayerGameType)
         {
                 case "join":
-			switch (attribs.source)
+			if(!Engine.HasXmppClient())
 			{
-				case "mainmenu":
-					getGUIObjectByName("pageJoin").hidden = false;
-					getGUIObjectByName("pageHost").hidden = true;
-					break;
-				case "lobby":
-					if (startJoin(attribs.name, attribs.ip))
-					{
-						switchSetupPage("pageJoin", "pageConnecting");
-					}
-					break;
+				getGUIObjectByName("pageJoin").hidden = false;
+				getGUIObjectByName("pageHost").hidden = true;
+			}
+			else
+			{
+				if (startJoin(attribs.name, attribs.ip))
+				{
+					switchSetupPage("pageJoin", "pageConnecting");
+				}
 			}
                         break;
                 case "host":
                         getGUIObjectByName("pageJoin").hidden = true;
                         getGUIObjectByName("pageHost").hidden = false;
-			switch (attribs.source)
+			if(!Engine.HasXmppClient())
 			{
-				case "mainmenu":
-					getGUIObjectByName("hostPlayerNameWrapper").hidden = false;
-					break;
-				case "lobby":
-					getGUIObjectByName("hostServerNameWrapper").hidden = false;
-					getGUIObjectByName("hostPlayerName").caption = attribs.name;
-					getGUIObjectByName("hostServerName").caption = attribs.name + "'s game";
-					break;
+				getGUIObjectByName("hostPlayerNameWrapper").hidden = false;
+			}
+			else
+			{
+				getGUIObjectByName("hostServerNameWrapper").hidden = false;
+				getGUIObjectByName("hostPlayerName").caption = attribs.name;
+				getGUIObjectByName("hostServerName").caption = attribs.name + "'s game";
 			}
                         break;
                 default:
@@ -152,7 +146,7 @@ function pollAndHandleNetworkClient()
 					else
 					{
 						Engine.PopGuiPage();
-						Engine.PushGuiPage("page_gamesetup.xml", { "type": g_GameType, "source": g_Source, "serverName": g_ServerName });
+						Engine.PushGuiPage("page_gamesetup.xml", { "type": g_GameType, "serverName": g_ServerName });
 						return; // don't process any more messages - leave them for the game GUI loop
 					}
 

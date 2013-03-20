@@ -24,9 +24,6 @@ var g_IsNetworked;
 // Is this user in control of game settings (i.e. is a network server, or offline player)
 var g_IsController;
 
-// Where this user come from ("mainmenu" or "lobby")
-var g_Source;
-
 //Server name, if user is a server, connected to the multiplayer lobby
 var g_ServerName;
 
@@ -85,25 +82,13 @@ function init(attribs)
 	default:
 		error("Unexpected 'type' in gamesetup init: "+attribs.type);
 	}
-
-	switch (attribs.source)
-	{
-	case "mainmenu":
-		g_Source = "mainmenu";
-		break;
-	case "lobby":
-		g_Source = "lobby";
-		break;
-	default:
-		error("Unrecognised source : " + attribs.source);
-	}
 	
         if (attribs.serverName)
 		g_ServerName = attribs.serverName;
 
 	// Init the Cancel Button caption and tooltip
 	var cancelButton = getGUIObjectByName("cancelGame");
-	if(g_Source != "lobby")
+	if(!Engine.HasXmppClient())
 	{
 		cancelButton.caption = "Main menu";
 		cancelButton.tooltip = "Return to the main menu."
@@ -389,7 +374,7 @@ function handleNetMessage(message)
 		{
 		case "disconnected":
 			Engine.DisconnectNetworkGame();
-			if (isServerOnLobby()) Engine.SendUnregisterGame(g_ServerName);
+			if (isServerOnLobby()) Engine.SendUnregisterGame();
 			Engine.PopGuiPage();
 			reportDisconnect(message.reason);
 			break;
@@ -429,18 +414,23 @@ function handleNetMessage(message)
 		g_PlayerAssignments = message.hosts;
 		updatePlayerList();
 
-		if (isServerOnLobby())
+		if (g_IsController)
 		{
 			sendRegisterGameStanza();
 		}
 		break;
 
 	case "start":
-		if (g_Source == "lobby") Engine.StopXmppClient();
+		if (g_IsController)
+		{
+			var players = [ assignment.name for each (assignment in g_PlayerAssignments) ]
+			Engine.SendChangeStateGame(Object.keys(g_PlayerAssignments).length, players.join(", "));
+		}
 		Engine.SwitchGuiPage("page_loading.xml", {
 			"attribs": g_GameAttributes,
 			"isNetworked" : g_IsNetworked,
-			"playerAssignments": g_PlayerAssignments
+			"playerAssignments": g_PlayerAssignments,
+			"isController": g_IsController
 		});
 		break;
 
@@ -630,16 +620,13 @@ function cancelSetup()
 {
 	Engine.DisconnectNetworkGame();
 
-	if(g_Source == "lobby")
-	{
-		// Set player presence
-		Engine.LobbySetPlayerPresence("available");
-	}
+	// Set player presence
+	Engine.LobbySetPlayerPresence("available");
 
-	if(isServerOnLobby())
+	if(g_IsController)
 	{
 		// Unregister the game
-		Engine.SendUnregisterGame(g_ServerName);
+		Engine.SendUnregisterGame();
 	}
 }
 
@@ -1191,7 +1178,7 @@ function updateGameAttributes()
 	if (g_IsNetworked)
 	{
 		Engine.SetNetworkGameAttributes(g_GameAttributes);
-		if (isServerOnLobby() && g_LoadingState >= 2)
+		if (g_IsController && g_LoadingState >= 2)
 		{
 			sendRegisterGameStanza();
 		}
@@ -1573,11 +1560,6 @@ function keywordTestOR(keywords, matches)
 	return false;
 }
 
-function isServerOnLobby()
-{
-	return (g_IsController && g_Source == "lobby") ? true : false;
-}
-
 function sendRegisterGameStanza()
 {
 	var selectedMapSize = getGUIObjectByName("mapSize").selected;
@@ -1586,11 +1568,8 @@ function sendRegisterGameStanza()
 	var mapSize = getGUIObjectByName("mapSize").list_data[selectedMapSize];
 	var victoryCondition = getGUIObjectByName("victoryCondition").list[selectedVictoryCondition];
 
-	var numberOfPlayers = 0;
-	for (var guid in g_PlayerAssignments)
-	{	
-		numberOfPlayers++;
-	}
+	var numberOfPlayers = Object.keys(g_PlayerAssignments).length;
+	var players = [ assignment.name for each (assignment in g_PlayerAssignments) ].join(", ");
 
 	var nbp = numberOfPlayers ? numberOfPlayers : 1;
 	var tnbp = g_GameAttributes.settings.PlayerData.length;
@@ -1601,7 +1580,8 @@ function sendRegisterGameStanza()
 		"mapSize":mapSize,
 		"victoryCondition":victoryCondition, 
 		"nbp":nbp,
-		"tnbp":tnbp
+		"tnbp":tnbp,
+		"players":players
 	};
 	Engine.SendRegisterGame(gameData);
 }

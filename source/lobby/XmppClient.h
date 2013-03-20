@@ -92,7 +92,8 @@ public:
   void recv();
   void SendIqGetGameList();
   void SendIqRegisterGame(CScriptVal data);
-  void SendIqUnregisterGame(std::string name);
+  void SendIqUnregisterGame();
+  void SendIqChangeStateGame(std::string nbp, std::string players);
   void SetPresence(std::string presence);
 
   CScriptValRooted GUIGetPlayerList();
@@ -110,7 +111,7 @@ protected:
   virtual void handleMUCInviteDecline(gloox::MUCRoom*, const gloox::JID&, const std::string&) {}
   virtual void handleMUCError(gloox::MUCRoom*, gloox::StanzaError);
   virtual void handleMUCInfo(gloox::MUCRoom*, int, const std::string&, const gloox::DataForm*) {}
-  virtual void handleMUCItems(gloox::MUCRoom*, const std::list<gloox::Disco::Item*, std::allocator<gloox::Disco::Item*> >&);
+  virtual void handleMUCItems(gloox::MUCRoom*, const std::list<gloox::Disco::Item*, std::allocator<gloox::Disco::Item*> >&) {}
   virtual void handleMUCMessage(gloox::MUCRoom* room, const gloox::Message& msg, bool priv);
 
   /* Log handler */

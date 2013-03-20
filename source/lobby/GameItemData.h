@@ -6,8 +6,10 @@
 #define ITEMS \
   ITEM(name)      \
   ITEM(ip)        \
+  ITEM(state)     \
   ITEM(nbp)       \
   ITEM(tnbp)      \
+  ITEM(players)   \
   ITEM(mapName)   \
   ITEM(mapSize)   \
   ITEM(victoryCondition)
@@ -17,10 +19,7 @@ class GameItemData
   friend class XmppClient;
   friend class GameListQuery;
 public:
-  GameItemData(std::string name= "", std::string ip = "")
-  : m_name(name), m_ip(ip)
-  {
-  }
+  GameItemData() {}
 
   virtual ~GameItemData() {}
 

@@ -27,7 +27,7 @@ function lobbyStart()
 
 	var username = getGUIObjectByName("connectUsername").caption;
 	var password = getGUIObjectByName("connectPassword").caption;
-	var playername = getGUIObjectByName("joinPlayerName").caption;
+	var playername = sanitisePlayerName(getGUIObjectByName("joinPlayerName").caption);
 	var feedback = getGUIObjectByName("connectFeedback");
 
 	if (!username || !password)
@@ -99,8 +99,8 @@ function onTick()
 			{
 				// We are connected, switch to the lobby page
 				Engine.PopGuiPage();
-				var sname = getGUIObjectByName("joinPlayerName").caption;
-				Engine.PushGuiPage("page_lobby.xml", { name: sname } );
+				var sname = sanitisePlayerName(getGUIObjectByName("joinPlayerName").caption);
+				Engine.SwitchGuiPage("page_lobby.xml", { name: sname } );
 
 				var username = getGUIObjectByName("connectUsername").caption;
 				var password = getGUIObjectByName("connectPassword").caption;
@@ -132,4 +132,11 @@ function onTick()
 			}
 		}
 	}
+}
+
+function sanitisePlayerName(name)
+{
+	// We delete the '[', ']' (GUI tags) and ',' (players names separator) characters
+	// and limit the length to 20 characters
+	return name.replace(/[\[\],]+/g,"").substr(0,20);
 }

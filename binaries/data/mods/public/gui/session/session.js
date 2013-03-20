@@ -1,6 +1,9 @@
 // Network Mode
 var g_IsNetworked = false;
 
+// Is this user in control of game settings (i.e. is a network server, or offline player)
+var g_IsController;
+
 // Cache the basic player data (name, civ, color)
 var g_Players = [];
 // Cache the useful civ data
@@ -76,6 +79,7 @@ function init(initData, hotloadData)
 	if (initData)
 	{
 		g_IsNetworked = initData.isNetworked; // Set network mode
+		g_IsController = initData.isController; // Set controller mode
 		g_PlayerAssignments = initData.playerAssignments;
 
 		// Cache the player data
@@ -193,6 +197,10 @@ function leaveGame()
 	stopAmbient();
 	endGame();
 
+	if (g_IsController)
+	{
+		Engine.SendUnregisterGame();
+	}
 	Engine.SwitchGuiPage("page_summary.xml", {
 							"gameResult"  : gameResult,
 							"timeElapsed" : extendedSimState.timeElapsed,

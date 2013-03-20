@@ -34,17 +34,19 @@ class BasicGameList(ElementBase):
   sub_interfaces = interfaces
   plugin_attrib = 'gamelist'
 
-  def addGame(self, name, ip, mapName, mapSize, victoryCondition, nbp, tnbp):
-    itemXml = ET.Element("game", {"name":name, "ip":ip, "nbp":nbp, "tnbp":tnbp, "mapName":mapName, "mapSize":mapSize, "victoryCondition":victoryCondition})
+  def addGame(self, name, ip, state, mapName, mapSize, victoryCondition, nbp, tnbp, players):
+    itemXml = ET.Element("game", {"name":name, "ip":ip, "state": state, "nbp":nbp, "tnbp":tnbp, "players":players, "mapName":mapName, "mapSize":mapSize, "victoryCondition":victoryCondition})
     self.xml.append(itemXml)
 
   def getGame(self):
     game = self.xml.find('{%s}game' % self.namespace)
-    return game.get("name"), game.get("ip"), game.get("mapName"), game.get("mapSize"), game.get("victoryCondition"), game.get("nbp"), game.get("tnbp")   
+    return game.get("name"), game.get("ip"), game.get("state"), game.get("mapName"), game.get("mapSize"), game.get("victoryCondition"), game.get("nbp"), game.get("tnbp"), game.get("players") 
 
   def getCommand(self):
     command = self.xml.find('{%s}command' % self.namespace)
     return command
+    
+
 
 class XpartaMuPP(sleekxmpp.ClientXMPP):
   """
@@ -57,15 +59,20 @@ class XpartaMuPP(sleekxmpp.ClientXMPP):
     self.room = room
     self.nick = nick
 
-    # Game management
+    # Game collection
     self.m_gameList = {}
+
+    # Store mapping of nicks and XmppIDs
+    self.m_xmppIdToNick = {}
     
     #DEMO
     if configDEMOModOn:
-      self.addGame("666.666.666.666", "Unplayable map", "666.666.666.666", "Serengeti", "128", "gold rush", "4", "4")
-      self.addGame("666.666.666.667", "Unreachale liberty", "666.666.666.667", "oasis", "256", "conquest", "2", "4")
+      self.storeGame("666.666.666.666", "Unplayable map", "666.666.666.666", "Serengeti", "128", "gold rush", "4", "4", "alice, bob")
+      self.storeGame("666.666.666.667", "Unreachale liberty", "666.666.666.667", "oasis", "256", "conquest", "2", "4", "alice, bob")
+      self.storeGame("666.666.666.668", "Waiting.. (feature not implemented) ", "666.666.666.668", "oasis", "256", "conquest", "2", "4", "alice, bob", "waiting")
+      self.storeGame("666.666.666.669", "Running.. (this game should not be sent)", "666.666.666.669", "oasis", "256", "conquest", "2", "4", "alice, bob", "running")
       #for i in range(50):
-      #  self.addGame("666.666.666."+str(i), "X"+str(i), "666.666.666."+str(i), "Oasis", "large", "conquest", "1", "4")   
+      #  self.storeGame("666.666.666."+str(i), "X"+str(i), "666.666.666."+str(i), "Oasis", "large", "conquest", "1", "4", "alice, bob")   
 
     register_stanza_plugin(Iq, BasicGameList)
     self.register_handler(Callback('Iq Gamelist',
@@ -89,8 +96,9 @@ class XpartaMuPP(sleekxmpp.ClientXMPP):
     logging.info("xpartamupp started")
 
     #DEMO
-    self.DEMOrequestGameList()
     #self.DEMOregisterGame()
+    #self.DEMOchangeStateGame()
+    #self.DEMOrequestGameList()
 
   def message(self, msg):
     """
@@ -106,6 +114,8 @@ class XpartaMuPP(sleekxmpp.ClientXMPP):
     """
     if presence['muc']['nick'] != self.nick:
       self.send_message(mto=presence['from'], mbody="Hello %s, welcome in the 0ad alpha chatroom. Polishes your weapons and get ready to fight!" %(presence['muc']['nick']), mtype='')
+      self.m_xmppIdToNick[presence['muc']['jid'].bare] = presence['muc']['nick']
+      logging.debug("Player '%s (%s - %s)' connected" %(presence['muc']['nick'], presence['muc']['jid'], presence['muc']['jid'].bare))
 
   def muc_offline(self, presence):
     """
@@ -140,22 +150,37 @@ class XpartaMuPP(sleekxmpp.ClientXMPP):
       command = iq['gamelist']['command'].text
       if command == 'register':
         try:
-          name, ip, mapName, mapSize, victoryCondition, nbp, tnbp = iq['gamelist']['game']
+          name, ip, state, mapName, mapSize, victoryCondition, nbp, tnbp, players = iq['gamelist']['game']
           logging.debug("ip " + ip)
-          self.addGame(iq['from'].bare,name,ip,mapName,mapSize,victoryCondition,nbp,tnbp)
+          self.storeGame(iq['from'].bare,name,ip,mapName,mapSize,victoryCondition,nbp,tnbp,players)
         except:
-          logging.error("Failed to process game data")
+          logging.error("Failed to process register data")
       elif command == 'unregister':
         self.removeGame(iq['from'].bare)
+      elif command == 'changestate':
+        try:
+          name, ip, state, mapName, mapSize, victoryCondition, nbp, tnbp, players = iq['gamelist']['game']
+          self.changeGameState(iq['from'].bare, nbp)
+        except:
+          logging.error("Failed to process changestate data")
+      else:
+        logging.error("Failed to process command '%s' received from %s" % command, iq['from'].bare)
 
   def sendGameList(self, to):
     """
     Send a massive stanza with the whole game list
     """
+    if not to.bare in self.m_xmppIdToNick:
+      logging.error("No player with the xmpp id '%s' known" % to.bare)
+      return
+
     stz = BasicGameList()
     for k in self.m_gameList:
       g = self.m_gameList[k]
-      stz.addGame(g['name'], g['ip'], g['mapName'], g['mapSize'], g['victoryCondition'], g['nbp'], g['tnbp'])
+      # Only send the game that are in the 'init' state and games
+      # and games that have to.bare in the list of players and are in the 'waiting' state.
+      if g['state'] == 'init' or (g['state'] == 'waiting' and self.m_xmppIdToNick[to.bare] in g['players-init']):
+        stz.addGame(g['name'], g['ip'], g['state'], g['mapName'], g['mapSize'], g['victoryCondition'], g['nbp'], g['tnbp'], ', '.join(g['players']))
     iq = self.Iq()
     iq['type'] = 'result'
     iq['to'] = to
@@ -181,8 +206,22 @@ class XpartaMuPP(sleekxmpp.ClientXMPP):
     Test function
     """
     stz = BasicGameList()
-    stz.addGame("DEMOregister","DEMOip","DEMOmap","","","","")
+    stz.addGame("DEMOregister","DEMOip","garbage","DEMOmap","","","2","2","bob charlie")
     stz['command'] = 'register'
+    iq = self.Iq()
+    iq['type'] = 'set'
+    iq['to'] = self.boundjid.full
+    iq.setPayload(stz)
+    iq.send(now=True, block=False)
+    return True
+
+  def DEMOchangeStateGame(self):
+    """
+    Test function
+    """
+    stz = BasicGameList()
+    stz.addGame("","","running","","","","1","","")
+    stz['command'] = 'changestate'
     iq = self.Iq()
     iq['type'] = 'set'
     iq['to'] = self.boundjid.full
@@ -192,13 +231,25 @@ class XpartaMuPP(sleekxmpp.ClientXMPP):
 
   # Game management
 
-  def addGame(self, sid, name, ip, mapName, mapSize, victoryCondition, nbp, tnbp):
-    game = { 'name':name, 'ip':ip, 'nbp':nbp, 'tnbp':tnbp, 'mapName':mapName, 'mapSize':mapSize, 'victoryCondition':victoryCondition } 
+  def storeGame(self, sid, name, ip, mapName, mapSize, victoryCondition, nbp, tnbp, players, state='init'):
+    game = { 'name':name, 'ip':ip, 'state':state, 'nbp':nbp, 'nbp-init':nbp, 'tnbp':tnbp, 'players':players.split(', '), 'players-init':players.split(', '), 'mapName':mapName, 'mapSize':mapSize, 'victoryCondition':victoryCondition } 
     self.m_gameList[sid] = game
 
   def removeGame(self, sid):
     if sid in self.m_gameList:
       del self.m_gameList[sid]
+
+  def changeGameState(self, sid, nbp):
+    if sid in self.m_gameList:
+      if self.m_gameList[sid]['nbp-init'] > nbp: 
+        logging.debug("change game (%s) state from %s to %s", sid, self.m_gameList[sid]['state'], 'waiting')
+        self.m_gameList[sid]['nbp'] = nbp
+        self.m_gameList[sid]['state'] = 'waiting'
+      else:
+        logging.debug("change game (%s) state from %s to %s", sid, self.m_gameList[sid]['state'], 'running')
+        self.m_gameList[sid]['nbp'] = nbp
+        self.m_gameList[sid]['state'] = 'running'
+        
 
 if __name__ == '__main__':
   # Setup the command line arguments.

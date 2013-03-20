@@ -25,6 +25,9 @@ function init(attribs)
 	var victoryConditionFilter = getGUIObjectByName("victoryConditionFilter");
 	victoryConditionFilter.list = ["Conquest","Any"];
 	victoryConditionFilter.list_data = ["conquest",""];
+
+	Engine.LobbySetPlayerPresence("available");
+	Engine.SendGetGameList();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -66,7 +69,7 @@ function resetFilters()
 	getGUIObjectByName("mapSizeFilter").selected = -1;
 	getGUIObjectByName("playersNumberFilter").selected = -1;
 	getGUIObjectByName("victoryConditionFilter").selected = -1;
-	getGUIObjectByName("hideFullFilter").checked = false;
+	getGUIObjectByName("hideFullFilter").checked = true;
 
 	// Update the list of games
 	updateGameList();
@@ -102,6 +105,12 @@ function updateGameList()
 	//to update the game info panel.
 	g_GameList = gameList;
 
+	//Sort the list of games to that games 'waiting' are displayed at the top
+	g_GameList.sort(function (a,b) {
+		return a.state == 'waiting' ? -1 : b.state == 'waiting' ? +1 : 0;
+
+	});
+
 	var list_name = [];
 	var list_ip = [];
 	var list_mapName = [];
@@ -127,7 +136,9 @@ function updateGameList()
 	{
 		if(displayGame(g, mapSizeFilter, playersNumberFilter, victoryConditionFilter, hideFullFilter))
 		{
-			list_name.push(toTitleCase(g.name));
+			// Highlight games 'waiting' for this player
+			var name = (g.state != 'waiting') ? toTitleCase(g.name) : '[color="orange"]' + toTitleCase(g.name) + '[/color]';
+			list_name.push(name);
 			list_ip.push(g.ip);
 			list_mapName.push(toTitleCase(g.mapName));
 			list_mapSize.push(tilesToMapSize(g.mapSize));
@@ -158,7 +169,10 @@ function updatePlayerList()
 
 	var playerList = Engine.GetPlayerList();
 	var playerListNames = [ player.name for each (player in playerList) ];
+	var playerListStatus = [ player.presence == "playing" ? "p" : "a" for each (player in playerList) ];
 
+	playersBox.list_name = playerListNames;
+	playersBox.list_status = playerListStatus;
 	playersBox.list = playerListNames;
 	if (playersBox.selected >= playersBox.list.length)
 		playersBox.selected = -1;
@@ -224,6 +238,7 @@ function selectGame(selected)
 
 	// Set the number of players, the map size and the victory condition text boxes
 	getGUIObjectByName("sgNbPlayers").caption = g_GameList[g].nbp + "/" + g_GameList[g].tnbp;
+	getGUIObjectByName("sgPlayersNames").caption = g_GameList[g].players;
 	getGUIObjectByName("sgMapSize").caption = tilesToMapSize(g_GameList[g].mapSize);
 	getGUIObjectByName("sgVictoryCondition").caption = toTitleCase(g_GameList[g].victoryCondition);
 
@@ -253,7 +268,7 @@ function joinSelectedGame()
 		Engine.LobbySetPlayerPresence("playing");
 
 		// Open Multiplayer connection window with join option.
-		Engine.PushGuiPage("page_gamesetup_mp.xml", { multiplayerGameType: "join", source: "lobby", name: sname, ip: sip });	
+		Engine.PushGuiPage("page_gamesetup_mp.xml", { multiplayerGameType: "join", name: sname, ip: sip });	
 	}
 }
 
@@ -346,16 +361,6 @@ function submitChatInput()
 		Engine.LobbySendMessage(text);
 		input.caption = "";
 	}
-}
-
-function handleMessage(message)
-{
-
-}
-
-function pp(txt)
-{
-	addChatMessage({"from":"debug", "color":"200 0 0", "text":txt});
 }
 
 function addChatMessage(msg)

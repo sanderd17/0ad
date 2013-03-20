@@ -613,6 +613,11 @@ void StartRegisterXmppClient(void* cbdata, std::string sUsername, std::string sP
 	g_XmppClient = new XmppClient(guiManager->GetScriptInterface(), sUsername, sPassword, "", "", true);
 }
 
+bool HasXmppClient(void* UNUSED(cbdata))
+{
+	return (g_XmppClient ? true : false);
+}
+
 void StopXmppClient(void* UNUSED(cbdata))
 {
 	ENSURE(g_XmppClient);
@@ -652,11 +657,18 @@ void SendRegisterGame(void* UNUSED(cbdata), CScriptVal data)
 	g_XmppClient->SendIqRegisterGame(data);
 }
 
-void SendUnregisterGame(void* UNUSED(cbdata), std::string name)
+void SendUnregisterGame(void* UNUSED(cbdata))
 {
 	if(!g_XmppClient)
 		return;
-	g_XmppClient->SendIqUnregisterGame(name);
+	g_XmppClient->SendIqUnregisterGame();
+}
+
+void SendChangeStateGame(void* UNUSED(cbdata), std::string nbp, std::string players)
+{
+	if(!g_XmppClient)
+		return;
+	g_XmppClient->SendIqChangeStateGame(nbp, players);
 }
 
 CScriptVal GetPlayerList(void* UNUSED(cbdata))
@@ -830,13 +842,15 @@ void GuiScriptingInit(ScriptInterface& scriptInterface)
 	// Lobby functions
 	scriptInterface.RegisterFunction<void, std::string, std::string, std::string, std::string, &StartXmppClient>("StartXmppClient");
 	scriptInterface.RegisterFunction<void, std::string, std::string, &StartRegisterXmppClient>("StartRegisterXmppClient");
+	scriptInterface.RegisterFunction<bool, &HasXmppClient>("HasXmppClient");
 	scriptInterface.RegisterFunction<void, &StopXmppClient>("StopXmppClient");
 	scriptInterface.RegisterFunction<void, &ConnectXmppClient>("ConnectXmppClient");
 	scriptInterface.RegisterFunction<void, &DisconnectXmppClient>("DisconnectXmppClient");
 	scriptInterface.RegisterFunction<void, &RecvXmppClient>("RecvXmppClient");
 	scriptInterface.RegisterFunction<void, &SendGetGameList>("SendGetGameList");
 	scriptInterface.RegisterFunction<void, CScriptVal, &SendRegisterGame>("SendRegisterGame");
-	scriptInterface.RegisterFunction<void, std::string, &SendUnregisterGame>("SendUnregisterGame");
+	scriptInterface.RegisterFunction<void, &SendUnregisterGame>("SendUnregisterGame");
+	scriptInterface.RegisterFunction<void, std::string, std::string, &SendChangeStateGame>("SendChangeStateGame");
 	scriptInterface.RegisterFunction<CScriptVal, &GetPlayerList>("GetPlayerList");
 	scriptInterface.RegisterFunction<CScriptVal, &GetGameList>("GetGameList");
 	scriptInterface.RegisterFunction<CScriptVal, &LobbyGuiPollMessage>("LobbyGuiPollMessage");

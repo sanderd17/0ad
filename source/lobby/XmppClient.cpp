@@ -195,22 +195,6 @@ void XmppClient::handleMUCError(gloox::MUCRoom*, gloox::StanzaError err)
   CreateSimpleMessage("system", msg, "error");
 }
 
-void XmppClient::handleMUCItems( MUCRoom * /*room*/, const Disco::ItemList& items )
-{
-  m_PlayerMap.clear();
-
-  // Add the received items
-  Disco::ItemList::const_iterator it = items.begin();
-  for( ; it != items.end(); ++it )
-  {
-    std::string jid = (*it)->jid().full().c_str();
-    std::string nick = (*it)->name().c_str();
-    m_PlayerMap[nick] = std::pair<std::string, int>(nick, Presence::Available);
-    //printf( "%s -- %s is an item here\n", (*it)->jid().full().c_str(), (*it)->name().c_str() );
-  }
-  CreateSimpleMessage("system", "playerlist updated", "internal");
-}
-
 /*
  *  Log (debug) Handler
  */
@@ -263,8 +247,6 @@ void XmppClient::onConnect()
   {
     CreateSimpleMessage("system", "connected");
     _mucRoom->join();
-    //_mucRoom->getRoomInfo();
-    _mucRoom->getRoomItems();
     SendIqGetGameList();
   }
 
@@ -316,24 +298,27 @@ void XmppClient::SendIqRegisterGame(CScriptVal data)
 {
   JID xpartamuppJid(_xpartamuppId);
 
-  std::string name, mapName, mapSize, victoryCondition, nbp, tnbp;
+  std::string name, mapName, mapSize, victoryCondition, nbp, tnbp, players;
   GetScriptInterface().GetProperty(data.get(), "name", name);
   GetScriptInterface().GetProperty(data.get(), "mapName", mapName);
   GetScriptInterface().GetProperty(data.get(), "mapSize", mapSize);
   GetScriptInterface().GetProperty(data.get(), "victoryCondition", victoryCondition);
   GetScriptInterface().GetProperty(data.get(), "nbp", nbp);
   GetScriptInterface().GetProperty(data.get(), "tnbp", tnbp);
+  GetScriptInterface().GetProperty(data.get(), "players", players);
 
   // Send IQ
   GameListQuery* g = new GameListQuery();
   g->m_command = "register";
-  /* This "x" fake ip will be overwritten by the ip stamp XMPP module */
-  GameItemData *pItemData = new GameItemData(name, "x");
+  GameItemData *pItemData = new GameItemData();
+  pItemData->m_name = name;
+  pItemData->m_ip = "x"; /* This "x" fake ip will be overwritten by the ip stamp XMPP module */
   pItemData->m_mapName = mapName;
   pItemData->m_mapSize = mapSize;
   pItemData->m_victoryCondition = victoryCondition;
   pItemData->m_nbp = nbp;
   pItemData->m_tnbp = tnbp;
+  pItemData->m_players = players;
   g->m_gameList.push_back( pItemData );
 
   IQ iq(gloox::IQ::Set, xpartamuppJid);
@@ -343,18 +328,38 @@ void XmppClient::SendIqRegisterGame(CScriptVal data)
 }
 
 /* Unregister a game */
-void XmppClient::SendIqUnregisterGame(std::string name)
+void XmppClient::SendIqUnregisterGame()
 {
   JID xpartamuppJid(_xpartamuppId);
 
   // Send IQ
   GameListQuery* g = new GameListQuery();
   g->m_command = "unregister";
-  g->m_gameList.push_back( new GameItemData(name) );
+  g->m_gameList.push_back( new GameItemData() );
 
   IQ iq(gloox::IQ::Set, xpartamuppJid);
   iq.addExtension( g );
   DbgXMPP("SendIqUnregisterGame [" << iq.tag()->xml() << "]");
+  _client->send(iq);
+}
+
+/* Change the state of a registered game to 'running' or 'waiting' - it's Xpartamupp that decide the game's state
+   comparing the current number of player 'nbp' to the number of players when the game was last registered. */
+void XmppClient::SendIqChangeStateGame(std::string nbp, std::string players)
+{
+  JID xpartamuppJid(_xpartamuppId);
+
+  // Send IQ
+  GameListQuery* g = new GameListQuery();
+  g->m_command = "changestate";
+  GameItemData *pItemData = new GameItemData();
+  pItemData->m_nbp = nbp;
+  pItemData->m_players = players;
+  g->m_gameList.push_back( pItemData );
+
+  IQ iq(gloox::IQ::Set, xpartamuppJid);
+  iq.addExtension( g );
+  DbgXMPP("SendIqChangeStateGame [" << iq.tag()->xml() << "]");
   _client->send(iq);
 }
 
@@ -452,7 +457,7 @@ CScriptValRooted XmppClient::GUIGetPlayerList()
     }
     GetScriptInterface().Eval("({})", player);
     GetScriptInterface().SetProperty(player.get(), "name", it->second.first.c_str());
-    GetScriptInterface().SetProperty(player.get(), "presenceType", presence.c_str());
+    GetScriptInterface().SetProperty(player.get(), "presence", presence.c_str());
 
     GetScriptInterface().SetProperty(playerList.get(), it->second.first.c_str(), player);
   }
