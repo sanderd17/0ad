@@ -293,9 +293,7 @@
 			style="StoneButton"
 			size="100%-164 100%-52 100%-24 100%-24"
 			tooltip_style="onscreenToolTip"
-			tooltip="Return to the main menu."
 		>
-			Main menu
 			<action on="Press">
 				<![CDATA[
 					cancelSetup();

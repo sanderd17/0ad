@@ -35,6 +35,7 @@ CGUI
 #include "CRadioButton.h"
 #include "CInput.h"
 #include "CList.h"
+#include "COList.h"
 #include "CDropDown.h"
 #include "CProgressBar.h"
 #include "CTooltip.h"
@@ -442,6 +443,7 @@ void CGUI::Initialize()
 	AddObjectType("minimap",        &CMiniMap::ConstructObject);
 	AddObjectType("input",			&CInput::ConstructObject);
 	AddObjectType("list",			&CList::ConstructObject);
+	AddObjectType("olist",			&COList::ConstructObject);
 	AddObjectType("dropdown",		&CDropDown::ConstructObject);
 	AddObjectType("tooltip",		&CTooltip::ConstructObject);
 }

@@ -170,7 +170,7 @@ Status: $status.
 					Matches
 					<action on="Press">
 						closeMenu();
-						Engine.PushGuiPage("page_gamesetup.xml", { type: "offline" });
+						Engine.PushGuiPage("page_gamesetup.xml", { type: "offline", source: "mainmenu" });
 					</action>
 				</object>
 
@@ -227,7 +227,7 @@ Status: $status.
 					<action on="Press">
 						closeMenu();
 						// Open Multiplayer connection window with join option.
-						Engine.PushGuiPage("page_gamesetup_mp.xml", "join");
+						Engine.PushGuiPage("page_gamesetup_mp.xml", { multiplayerGameType: "join", source: "mainmenu" });
 					</action>
 				</object>
 
@@ -242,10 +242,25 @@ Status: $status.
 					<action on="Press">
 						closeMenu();
 						// Open Multiplayer connection window with host option.
-						Engine.PushGuiPage("page_gamesetup_mp.xml", "host");
+						Engine.PushGuiPage("page_gamesetup_mp.xml", { multiplayerGameType: "host", source: "mainmenu" });
 					</action>
 				</object>
-			</object>
+
+				<object name="subMenuMultiplayerLobbyButton"
+					type="button"
+					style="StoneButtonFancy"
+					size="0 64 100% 92"
+					tooltip_style="pgToolTip"
+					tooltip="Launch the multiplayer lobby."
+				>
+					Game Lobby
+					<action on="Press">
+						closeMenu();
+						// Open Multiplayer game lobby.
+						Engine.PushGuiPage("page_prelobby.xml", []);
+					</action>
+				</object>
+				</object>
 
 			<!-- submenuToolsAndOptions -->
 			<object name="submenuToolsAndOptions"
@@ -376,7 +391,7 @@ Status: $status.
 					Multiplayer
 					<action on="Press">
 						closeMenu();
-						openMenu("submenuMultiplayer", (this.parent.size.top+this.size.top), (this.size.bottom-this.size.top), 2);
+						openMenu("submenuMultiplayer", (this.parent.size.top+this.size.top), (this.size.bottom-this.size.top), 3);
 					</action>
 				</object>
 

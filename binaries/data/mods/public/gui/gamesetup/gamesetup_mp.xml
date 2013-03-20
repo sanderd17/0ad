@@ -65,6 +65,7 @@
 				Set up your server to host.
 			</object>
 
+			<object name="hostPlayerNameWrapper" hidden="true">
 			<object type="text" size="0 40 200 70" style="RightLabelText">
 				Player name:
 			</object>
@@ -74,8 +75,9 @@
 					this.caption = Engine.GetDefaultPlayerName();
 				</action>
 			</object>
+			</object>
 
-			<object hidden="true"> <!-- TODO: restore this when the server name is actually used -->
+			<object name="hostServerNameWrapper" hidden="true">
 			<object type="text" size="0 80 200 110" style="RightLabelText">
 				Server name:
 			</object>
@@ -96,6 +98,9 @@
 						hostPlayerName,
 						getGUIObjectByName("hostServerName").caption))
 					{
+						// Set player presence
+						Engine.LobbySetPlayerPresence("playing");
+
 						switchSetupPage("pageHost", "pageConnecting");
 					}
 				</action>

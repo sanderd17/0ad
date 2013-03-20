@@ -522,6 +522,17 @@ function setup_all_libs ()
 
 
 	source_dirs = {
+		"lobby",
+	}
+	extern_libs = {
+		"spidermonkey",
+		"gloox",
+		"boost",
+	}
+	setup_static_lib_project("lobby", source_dirs, extern_libs, {})
+
+
+	source_dirs = {
 		"simulation2",
 		"simulation2/components",
 		"simulation2/helpers",
@@ -572,7 +583,8 @@ function setup_all_libs ()
 		"zlib",
 		"boost",
 		"enet",
-		"libcurl"
+		"libcurl",
+		"gloox"
 	}
 	
 	if not _OPTIONS["without-audio"] then
@@ -621,7 +633,8 @@ function setup_all_libs ()
 		"spidermonkey",
 		"sdl",	-- key definitions
 		"opengl",
-		"boost"
+		"boost",
+		"gloox"
 	}
 	setup_static_lib_project("gui", source_dirs, extern_libs, {})
 
@@ -745,6 +758,8 @@ used_extern_libs = {
 	"libcurl",
 
 	"valgrind",
+
+	"gloox"
 }
 
 if not os.is("windows") and not _OPTIONS["android"] and not os.is("macosx") then

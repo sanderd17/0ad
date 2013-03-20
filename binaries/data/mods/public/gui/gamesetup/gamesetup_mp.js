@@ -1,33 +1,61 @@
 var g_IsConnecting = false;
 var g_GameType; // "server" or "client"
+var g_Source; // "mainmenu" or "lobby"
+var g_ServerName = "";
+var g_Name;
+var g_Ip;
 
 var g_IsRejoining = false;
 var g_GameAttributes; // used when rejoining
 var g_PlayerAssignments; // used when rejoining
 
-function init(multiplayerGameType)
+function init(attribs)
 {
-	switch (multiplayerGameType)
-	{
-	case "join":
-		getGUIObjectByName("pageJoin").hidden = false;
-		getGUIObjectByName("pageHost").hidden = true;
-		break;
-	case "host":
-		getGUIObjectByName("pageJoin").hidden = true;
-		getGUIObjectByName("pageHost").hidden = false;
-		break;
-	default:
-		error("Unrecognised multiplayer game type : " + multiplayerGameType);
-		break;
-	}
+	g_Source = attribs.source;
+        switch (attribs.multiplayerGameType)
+        {
+                case "join":
+			switch (attribs.source)
+			{
+				case "mainmenu":
+					getGUIObjectByName("pageJoin").hidden = false;
+					getGUIObjectByName("pageHost").hidden = true;
+					break;
+				case "lobby":
+					if (startJoin(attribs.name, attribs.ip))
+					{
+						switchSetupPage("pageJoin", "pageConnecting");
+					}
+					break;
+			}
+                        break;
+                case "host":
+                        getGUIObjectByName("pageJoin").hidden = true;
+                        getGUIObjectByName("pageHost").hidden = false;
+			switch (attribs.source)
+			{
+				case "mainmenu":
+					getGUIObjectByName("hostPlayerNameWrapper").hidden = false;
+					break;
+				case "lobby":
+					getGUIObjectByName("hostServerNameWrapper").hidden = false;
+					getGUIObjectByName("hostPlayerName").caption = attribs.name;
+					getGUIObjectByName("hostServerName").caption = attribs.name + "'s game";
+					break;
+			}
+                        break;
+                default:
+                        error("Unrecognised multiplayer game type : " + attribs.multiplayerGameType);
+                        break;
+        }
 }
 
 function cancelSetup()
 {
 	if (g_IsConnecting)
 		Engine.DisconnectNetworkGame();
-	Engine.PopGuiPage();	
+
+	Engine.PopGuiPage();
 }
 
 function startConnectionStatus(type)
@@ -43,6 +71,11 @@ function onTick()
 	if (!g_IsConnecting)
 		return;
 
+	pollAndHandleNetworkClient();
+}
+
+function pollAndHandleNetworkClient()
+{
 	while (true)
 	{
 		var message = Engine.PollNetworkClient();
@@ -119,7 +152,7 @@ function onTick()
 					else
 					{
 						Engine.PopGuiPage();
-						Engine.PushGuiPage("page_gamesetup.xml", { "type": g_GameType });
+						Engine.PushGuiPage("page_gamesetup.xml", { "type": g_GameType, "source": g_Source, "serverName": g_ServerName });
 						return; // don't process any more messages - leave them for the game GUI loop
 					}
 
@@ -163,7 +196,7 @@ function startHost(playername, servername)
 	}
 
 	startConnectionStatus("server");
-	// TODO: ought to do something(?) with servername
+	g_ServerName = servername;
 
 	return true;
 }
