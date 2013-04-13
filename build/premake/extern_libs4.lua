@@ -275,7 +275,7 @@ extern_lib_defs = {
 	gloox = {
 		compile_settings = function()
 			if os.is("windows") then
-				add_default_lib_paths("gloox")
+				add_default_include_paths("gloox")
 			end
 		end,
 		link_settings = function()
