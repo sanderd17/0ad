@@ -165,15 +165,22 @@ function updateGameList()
 
 function updatePlayerList()
 {
-	var playersBox = getGUIObjectByName("playersBox")
-
+	var nickname = Engine.GetDefaultPlayerName();
 	var playerList = Engine.GetPlayerList();
-	var playerListNames = [ player.name for each (player in playerList) ];
-	var playerListStatus = [ player.presence == "playing" ? "p" : "a" for each (player in playerList) ];
 
-	playersBox.list_name = playerListNames;
-	playersBox.list_status = playerListStatus;
-	playersBox.list = playerListNames;
+	list_name = [];
+	list_status = [];
+
+	for each (p in playerList)
+	{
+		list_name.push(p.name == nickname ? '[color="orange"]'+p.name+'[/color]' : p.name);
+		list_status.push(p.presence == "playing" ? "p" : "a");
+	}
+
+	var playersBox = getGUIObjectByName("playersBox")
+	playersBox.list_name = list_name;
+	playersBox.list_status = list_status;
+	playersBox.list = list_name;
 	if (playersBox.selected >= playersBox.list.length)
 		playersBox.selected = -1;
 }
@@ -243,7 +250,7 @@ function selectGame(selected)
 	getGUIObjectByName("sgVictoryCondition").caption = toTitleCase(g_GameList[g].victoryCondition);
 
 	// Set the map preview
-	var mapPreview = mapSettings.Preview || "nopreview.pmng";
+	var mapPreview = mapSettings.Preview || "nopreview.png";
 	getGUIObjectByName("sgMapPreview").sprite = "cropped:(0.7812,0.5859)session/icons/mappreview/" + mapPreview;
 
 }
@@ -316,13 +323,11 @@ function onTick()
 							// Clear the list of games and the list of players
 							updateGameList();
 							updatePlayerList();
-							// Disable the 'host' and 'refresh' buttons
-							getGUIObjectByName("refreshButton").enabled = false;
+							// Disable the 'host' button
 							getGUIObjectByName("hostButton").enabled = false;
 						}
 						else if (message.text == "connected")
 						{
-							getGUIObjectByName("refreshButton").enabled = true
 							getGUIObjectByName("hostButton").enabled = true;
 						}
 						break;
