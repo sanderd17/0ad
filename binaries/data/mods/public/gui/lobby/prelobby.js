@@ -123,7 +123,7 @@ function onTick()
 				getGUIObjectByName("pageRegister").hidden = true;
 				getGUIObjectByName("pageConnect").hidden = false;
 			}
-			else if(message.type == "system" && message.level == "error")
+			else if(message.type == "system" && (message.level == "error" || message.text == "disconnected"))
 			{
 				getGUIObjectByName("connectFeedback").caption = message.text;
 				getGUIObjectByName("registerFeedback").caption = message.text;

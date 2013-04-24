@@ -91,6 +91,7 @@ XmppClient::XmppClient(ScriptInterface& scriptInterface, std::string sUsername, 
     _client = new Client(clientJid, sPassword);
   else
     _client = new Client(sServer);
+  _client->setTls(TLSDisabled);
 
   _client->registerConnectionListener( this );
   _client->setPresence(Presence::Available, -1);
@@ -272,8 +273,10 @@ void XmppClient::onDisconnect( ConnectionError e )
   m_GameList.clear();
 }
 
-bool XmppClient::onTLSConnect( const CertInfo& )
+bool XmppClient::onTLSConnect( const CertInfo& info )
 {
+  DbgXMPP("onTLSConnect");
+  DbgXMPP("status: " << info.status << "\nissuer: " << info.issuer << "\npeer: " << info.server << "\nprotocol: " << info.protocol << "\nmac: " << info.mac << "\ncipher: " << info.cipher << "\ncompression: " << info.compression );
   return true;
 }
 
