@@ -112,11 +112,22 @@ BuildingConstructionPlan.prototype.findGoodPosition = function(gameState) {
 					if (template.genericName() == "House" && ent.genericName() == "House") {
 						friendlyTiles.addInfluence(x, z, 15.0,20,'linear');	// houses are close to other houses
 						alreadyHasHouses = true;
+					} else if (template.hasClass("GarrisonFortress") && ent.genericName() == "House")
+					{
+						friendlyTiles.addInfluence(x, z, 30, -50);
 					} else if (template.genericName() == "House") {
 						friendlyTiles.addInfluence(x, z, Math.ceil(infl/2.0),infl);	// houses are farther away from other buildings but houses
 						friendlyTiles.addInfluence(x, z, Math.ceil(infl/4.0),-infl/2.0);	// houses are farther away from other buildings but houses
+					} else if (template.hasClass("GarrisonFortress"))
+					{
+						friendlyTiles.addInfluence(x, z, 20, 10);
+						friendlyTiles.addInfluence(x, z, 10, -40, 'linear');
 					} else if (ent.genericName() != "House") // houses have no influence on other buildings
+					{
 						friendlyTiles.addInfluence(x, z, infl);
+						//avoid building too close to each other if possible.
+						friendlyTiles.addInfluence(x, z, 5, -5, 'linear');
+					}
 						// If this is not a field add a negative influence near the CivCentre because we want to leave this
 						// area for fields.
 					if (ent.hasClass("CivCentre") && template.genericName() != "House"){
@@ -138,11 +149,13 @@ BuildingConstructionPlan.prototype.findGoodPosition = function(gameState) {
 	// also not for fields who can be stacked quite a bit
 	var radius = 0;
 	if (template.genericName() == "Field")
-		radius = Math.ceil(template.obstructionRadius() / cellSize) - 0.7;
+		radius = Math.ceil(template.obstructionRadius() / cellSize) - 0.4;
+	else if (template.hasClass("GarrisonFortress"))
+		radius = Math.ceil(template.obstructionRadius() / cellSize) + 2;
 	else if (template.buildCategory() === "Dock")
 		radius = 1;//Math.floor(template.obstructionRadius() / cellSize);
-	else if (template.genericName() != "House" && !template.hasClass("DropsiteWood") && !template.hasClass("DropsiteStone") && !template.hasClass("DropsiteMetal"))
-		radius = Math.ceil(template.obstructionRadius() / cellSize) + 1;
+	else if (!template.hasClass("DropsiteWood") && !template.hasClass("DropsiteStone") && !template.hasClass("DropsiteMetal"))
+		radius = Math.ceil(template.obstructionRadius() / cellSize + 1);
 	else
 		radius = Math.ceil(template.obstructionRadius() / cellSize);
 	

@@ -43,20 +43,18 @@ public:
 
 	virtual void Play() = 0;
 	virtual void Stop() = 0;
-	virtual	bool SoundStale() = 0;
-	virtual void TouchTimer() = 0;
+
 	virtual void Attach(CSoundData* itemData) = 0;
-	virtual bool CanAttach(CSoundData* itemData) = 0;
 
 	virtual void EnsurePlay() = 0;
 	virtual void PlayAsMusic() = 0;
 	virtual void PlayAsAmbient() = 0;
-	virtual	void SetIsManaged(bool manage) = 0;
 
 	virtual void PlayAndDelete() = 0;
 	virtual void StopAndDelete() = 0;
 	virtual void FadeToIn(ALfloat newVolume, double fadeDuration) = 0;
 	virtual void FadeAndDelete(double fadeTime) = 0;
+	virtual void FadeAndPause(double fadeTime) = 0;
 	virtual void PlayLoop() = 0;
 
 	virtual void SetCone(ALfloat innerCone, ALfloat outerCone, ALfloat coneGain) = 0;
@@ -64,6 +62,9 @@ public:
 	virtual void SetGain(ALfloat gain) = 0;
 	virtual void SetLocation(const CVector3D& position) = 0;
 	virtual void SetRollOff(ALfloat gain) = 0;
+
+	virtual void Pause() = 0;
+	virtual void Resume() = 0;
 };
 
 #endif // CONFIG2_AUDIO

@@ -1196,6 +1196,47 @@ bool Autostart(const CmdLineArgs& args)
 			CStr name = aiArgs[i].AfterFirst(":");
 
 			scriptInterface.SetProperty(player.get(), "AI", std::string(name));
+			scriptInterface.SetProperty(player.get(), "AIDiff", 1);
+			scriptInterface.SetPropertyInt(playerData.get(), playerID-1, player);
+		}
+	}
+	// Set AI difficulty
+	if (args.Has("autostart-aidiff"))
+	{
+		std::vector<CStr> civArgs = args.GetMultiple("autostart-aidiff");
+		for (size_t i = 0; i < civArgs.size(); ++i)
+		{
+			// Instead of overwriting existing player data, modify the array
+			CScriptVal player;
+			if (!scriptInterface.GetPropertyInt(playerData.get(), i, player) || player.undefined())
+			{
+				scriptInterface.Eval("({})", player);
+			}
+			
+			int playerID = civArgs[i].BeforeFirst(":").ToInt();
+			int difficulty = civArgs[i].AfterFirst(":").ToInt();
+			
+			scriptInterface.SetProperty(player.get(), "AIDiff", difficulty);
+			scriptInterface.SetPropertyInt(playerData.get(), playerID-1, player);
+		}
+	}
+	// Set player data for Civs
+	if (args.Has("autostart-civ"))
+	{
+		std::vector<CStr> civArgs = args.GetMultiple("autostart-civ");
+		for (size_t i = 0; i < civArgs.size(); ++i)
+		{
+			// Instead of overwriting existing player data, modify the array
+			CScriptVal player;
+			if (!scriptInterface.GetPropertyInt(playerData.get(), i, player) || player.undefined())
+			{
+				scriptInterface.Eval("({})", player);
+			}
+			
+			int playerID = civArgs[i].BeforeFirst(":").ToInt();
+			CStr name = civArgs[i].AfterFirst(":");
+			
+			scriptInterface.SetProperty(player.get(), "Civ", std::string(name));
 			scriptInterface.SetPropertyInt(playerData.get(), playerID-1, player);
 		}
 	}

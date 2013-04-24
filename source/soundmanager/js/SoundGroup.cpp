@@ -157,7 +157,7 @@ float CSoundGroup::RadiansOffCenter(const CVector3D& position, bool& onScreen, f
 	return answer;
 }
 
-void CSoundGroup::UploadPropertiesAndPlay(int theIndex, const CVector3D& position, entity_id_t source)
+void CSoundGroup::UploadPropertiesAndPlay(size_t theIndex, const CVector3D& position, entity_id_t source)
 {
 #if CONFIG2_AUDIO
 	if ( g_SoundManager )
@@ -182,27 +182,30 @@ void CSoundGroup::UploadPropertiesAndPlay(int theIndex, const CVector3D& positio
 
 					ISoundItem*	hSound = g_SoundManager->ItemForEntity( source, sndData);
 
-					if (!TestFlag(eOmnipresent))
+					if ( hSound )
 					{
-						if (TestFlag(eDistanceless))
-							itemRollOff = 0;
-						
-						hSound->SetLocation(CVector3D((sndDist * sin(offSet)), 0, - sndDist * cos(offSet)));
-						hSound->SetRollOff(itemRollOff);
+						if (!TestFlag(eOmnipresent))
+						{
+							if (TestFlag(eDistanceless))
+								itemRollOff = 0;
+							
+							hSound->SetLocation(CVector3D((sndDist * sin(offSet)), 0, - sndDist * cos(offSet)));
+							hSound->SetRollOff(itemRollOff);
+						}
+
+						if (TestFlag(eRandPitch))
+							hSound->SetPitch(RandFloat(m_PitchLower, m_PitchUpper));
+						else
+							hSound->SetPitch(m_Pitch);
+
+						ALfloat theGain = m_Gain;
+						if (TestFlag(eRandGain))
+							theGain = RandFloat(m_GainLower, m_GainUpper);
+
+						hSound->SetCone(m_ConeInnerAngle, m_ConeOuterAngle, m_ConeOuterGain);
+
+						g_SoundManager->PlayGroupItem(hSound, theGain);
 					}
-
-					if (TestFlag(eRandPitch))
-						hSound->SetPitch(RandFloat(m_PitchLower, m_PitchUpper));
-					else
-						hSound->SetPitch(m_Pitch);
-
-					ALfloat theGain = m_Gain;
-					if (TestFlag(eRandGain))
-						theGain = RandFloat(m_GainLower, m_GainUpper);
-
-					hSound->SetCone(m_ConeInnerAngle, m_ConeOuterAngle, m_ConeOuterGain);
-
-					g_SoundManager->PlayGroupItem(hSound, theGain);
 				}
 			}
 		}
@@ -228,7 +231,7 @@ void CSoundGroup::PlayNext(const CVector3D& position, entity_id_t source)
 	if (filenames.size() == 0)
 		return;
 	
-	m_index = (size_t)rand(0, (size_t)filenames.size());
+	m_index = rand(0, (size_t)filenames.size());
 	UploadPropertiesAndPlay(m_index, position, source);
 }
 

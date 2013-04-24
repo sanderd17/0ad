@@ -77,9 +77,9 @@ private:
 	{
 		NONCOPYABLE(CAIPlayer);
 	public:
-		CAIPlayer(CAIWorker& worker, const std::wstring& aiName, player_id_t player,
+		CAIPlayer(CAIWorker& worker, const std::wstring& aiName, player_id_t player, uint8_t difficulty,
 				const shared_ptr<ScriptRuntime>& runtime, boost::rand48& rng) :
-			m_Worker(worker), m_AIName(aiName), m_Player(player), m_ScriptInterface("Engine", "AI", runtime)
+			m_Worker(worker), m_AIName(aiName), m_Player(player), m_Difficulty(difficulty), m_ScriptInterface("Engine", "AI", runtime)
 		{
 			m_ScriptInterface.SetCallbackData(static_cast<void*> (this));
 
@@ -231,6 +231,7 @@ private:
 				CScriptVal settings;
 				m_ScriptInterface.Eval(L"({})", settings);
 				m_ScriptInterface.SetProperty(settings.get(), "player", m_Player, false);
+				m_ScriptInterface.SetProperty(settings.get(), "difficulty", m_Difficulty, false);
 				ENSURE(m_Worker.m_HasLoadedEntityTemplates);
 				m_ScriptInterface.SetProperty(settings.get(), "templates", m_Worker.m_EntityTemplates, false);
 
@@ -275,6 +276,7 @@ private:
 		CAIWorker& m_Worker;
 		std::wstring m_AIName;
 		player_id_t m_Player;
+		uint8_t m_Difficulty;
 		bool m_UseSharedComponent;
 		
 		ScriptInterface m_ScriptInterface;
@@ -291,11 +293,11 @@ public:
 	};
 
 	CAIWorker() :
-		// TODO: Passing a 24 MB argument to CreateRuntime() is a temporary fix
+		// TODO: Passing a 32 MB argument to CreateRuntime() is a temporary fix
 		// to prevent frequent AI out-of-memory crashes. The argument should be
 		// removed as soon whenever the new pathfinder is committed
 		// And the AIs can stop relying on their own little hands.
-		m_ScriptRuntime(ScriptInterface::CreateRuntime(25165824)),
+		m_ScriptRuntime(ScriptInterface::CreateRuntime(33554432)),
 		m_ScriptInterface("Engine", "AI", m_ScriptRuntime),
 		m_TurnNum(0),
 		m_CommandsComputed(true),
@@ -361,9 +363,6 @@ public:
 
 	bool TryLoadSharedComponent(bool hasTechs)
 	{
-		// only load if there are AI players.
-		if (m_Players.size() == 0)
-			return false;
 		// we don't need to load it.
 		if (!m_HasSharedComponent)
 			return false;
@@ -455,9 +454,9 @@ public:
 		return true;
 	}
 
-	bool AddPlayer(const std::wstring& aiName, player_id_t player, bool callConstructor)
+	bool AddPlayer(const std::wstring& aiName, player_id_t player, uint8_t difficulty, bool callConstructor)
 	{
-		shared_ptr<CAIPlayer> ai(new CAIPlayer(*this, aiName, player, m_ScriptRuntime, m_RNG));
+		shared_ptr<CAIPlayer> ai(new CAIPlayer(*this, aiName, player, difficulty, m_ScriptRuntime, m_RNG));
 		if (!ai->Initialise(callConstructor))
 			return false;
 		
@@ -594,11 +593,20 @@ public:
 
 		serializer.NumberU32_Unbounded("num ais", (u32)m_Players.size());
 
+		serializer.Bool("useSharedScript", m_HasSharedComponent);
+		if (m_HasSharedComponent)
+		{
+			CScriptVal sharedData;
+			if (!m_ScriptInterface.CallFunction(m_SharedAIObj.get(), "Serialize", sharedData))
+				LOGERROR(L"AI shared script Serialize call failed");
+			serializer.ScriptVal("sharedData", sharedData);
+		}
 		for (size_t i = 0; i < m_Players.size(); ++i)
 		{
 			serializer.String("name", m_Players[i]->m_AIName, 1, 256);
 			serializer.NumberI32_Unbounded("player", m_Players[i]->m_Player);
-
+			serializer.NumberU8_Unbounded("difficulty", m_Players[i]->m_Difficulty);
+			
 			serializer.NumberU32_Unbounded("num commands", (u32)m_Players[i]->m_Commands.size());
 			for (size_t j = 0; j < m_Players[i]->m_Commands.size(); ++j)
 			{
@@ -610,6 +618,7 @@ public:
 			if (!m_ScriptInterface.CallFunction(m_Players[i]->m_Obj.get(), "Serialize", scriptData))
 				LOGERROR(L"AI script Serialize call failed");
 			serializer.ScriptVal("data", scriptData);
+			
 		}
 	}
 
@@ -633,13 +642,25 @@ public:
 		uint32_t numAis;
 		deserializer.NumberU32_Unbounded("num ais", numAis);
 
+		deserializer.Bool("useSharedScript", m_HasSharedComponent);
+		TryLoadSharedComponent(false);
+		if (m_HasSharedComponent)
+		{
+			CScriptVal sharedData;
+			deserializer.ScriptVal("sharedData", sharedData);
+			if (!m_ScriptInterface.CallFunctionVoid(m_SharedAIObj.get(), "Deserialize", sharedData))
+				LOGERROR(L"AI shared script Deserialize call failed");
+		}
+
 		for (size_t i = 0; i < numAis; ++i)
 		{
 			std::wstring name;
 			player_id_t player;
+			uint8_t difficulty;
 			deserializer.String("name", name, 1, 256);
 			deserializer.NumberI32_Unbounded("player", player);
-			if (!AddPlayer(name, player, true))
+			deserializer.NumberU8_Unbounded("difficulty",difficulty);
+			if (!AddPlayer(name, player, difficulty, true))
 				throw PSERROR_Deserialize_ScriptError();
 
 			uint32_t numCommands;
@@ -651,13 +672,18 @@ public:
 				deserializer.ScriptVal("command", val);
 				m_Players.back()->m_Commands.push_back(m_ScriptInterface.WriteStructuredClone(val.get()));
 			}
-			
 			CScriptVal scriptData;
 			deserializer.ScriptVal("data", scriptData);
-			if (!m_ScriptInterface.CallFunctionVoid(m_Players.back()->m_Obj.get(), "Deserialize", scriptData))
-				LOGERROR(L"AI script Deserialize call failed");
+			if (m_Players[i]->m_UseSharedComponent)
+			{
+				if (!m_ScriptInterface.CallFunctionVoid(m_Players.back()->m_Obj.get(), "Deserialize", scriptData, m_SharedAIObj))
+					LOGERROR(L"AI script Deserialize call failed");
+			}
+			else if (!m_ScriptInterface.CallFunctionVoid(m_Players.back()->m_Obj.get(), "Deserialize", scriptData))
+			{
+				LOGERROR(L"AI script deserialize() call failed");
+			}
 		}
-		TryLoadSharedComponent(false);
 	}
 	
 	int getPlayerSize()
@@ -726,7 +752,7 @@ private:
 		}
 
 		// Run GC if we are about to overflow
-		if (JS_GetGCParameter(m_ScriptInterface.GetRuntime(), JSGC_BYTES) > 24000000)
+		if (JS_GetGCParameter(m_ScriptInterface.GetRuntime(), JSGC_BYTES) > 33000000)
 		{
 			PROFILE3("AI compute GC");
 
@@ -840,9 +866,9 @@ public:
 		}
 	}
 
-	virtual void AddPlayer(std::wstring id, player_id_t player)
+	virtual void AddPlayer(std::wstring id, player_id_t player, uint8_t difficulty)
 	{
-		m_Worker.AddPlayer(id, player, true);
+		m_Worker.AddPlayer(id, player, difficulty, true);
 
 		// AI players can cheat and see through FoW/SoD, since that greatly simplifies
 		// their implementation.

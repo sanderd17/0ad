@@ -325,7 +325,14 @@ var EntityTemplate = Class({
 			return undefined;
 		return +this._template.ResourceSupply.Amount;
 	},
-	
+						   
+	maxGatherers: function()
+	{
+		if (this._template.ResourceSupply !== undefined)
+			return this._template.ResourceSupply.MaxGatherers;
+		return 0;
+	},
+
 	resourceGatherRates: function() {
 		if (!this._template.ResourceGatherer)
 			return undefined;
@@ -357,17 +364,14 @@ var EntityTemplate = Class({
 	
 	/**
 	 * Returns whether this is an animal that is too difficult to hunt.
-	 * (Currently this just includes skittish animals, which are probably
-	 * too fast to chase.)
+	 * (Any non domestic currently.)
 	 */
 	isUnhuntable: function() {
 		if (!this._template.UnitAI || !this._template.UnitAI.NaturalBehaviour)
 			return false;
 
-		// return (this._template.UnitAI.NaturalBehaviour == "skittish");
-		// Actually, since the AI is currently rubbish at hunting, skip all animals
-		// that aren't really weak:
-		return this._template.Health.Max >= 10;
+		// only attack domestic animals since they won't flee nor retaliate.
+		return this._template.UnitAI.NaturalBehaviour !== "domestic";
 	},
 						   
 	walkSpeed: function() {
@@ -383,9 +387,9 @@ var EntityTemplate = Class({
 	},
 	
 	buildTime: function() {
-		if (!this._template.Cost || !this._template.Cost.buildTime)
+		if (!this._template.Cost || !this._template.Cost.BuildTime)
 			return undefined;
-		return this._template.Cost.buildTime;
+		return this._template.Cost.BuildTime;
 	},
 
 	buildDistance: function() {
@@ -523,6 +527,20 @@ var Entity = Class({
 			return undefined;
 		return this._entity.resourceSupplyAmount;
 	},
+				   
+	resourceSupplyGatherers: function()
+	{
+		if (this._entity.resourceSupplyGatherers !== undefined)
+			return this._entity.resourceSupplyGatherers;
+		return [];
+	},
+				   
+	isFull: function()
+	{
+		if (this._entity.resourceSupplyGatherers !== undefined)
+			return (this.maxGatherers() === this._entity.resourceSupplyGatherers.length);
+		return undefined;
+	},
 
 	resourceCarrying: function() {
 		if(this._entity.resourceCarrying === undefined)
@@ -555,14 +573,15 @@ var Entity = Class({
 	unload: function(id) {
 		if (!this._template.GarrisonHolder)
 			return undefined;
-		Engine.PostCommand({"type": "unload", "garrisonHolder": this.id(), "entity": id});
+		Engine.PostCommand({"type": "unload", "garrisonHolder": this.id(), "entities": [id]});
 		return this;
 	},
-	
+
+	// Unloads all owned units, don't unload allies
 	unloadAll: function() {
 		if (!this._template.GarrisonHolder)
 			return undefined;
-		Engine.PostCommand({"type": "unload-all", "garrisonHolders": [this.id()]});
+		Engine.PostCommand({"type": "unload-all-own", "garrisonHolders": [this.id()]});
 		return this;
 	},
 
@@ -579,10 +598,10 @@ var Entity = Class({
 	// Flees from a unit in the opposite direction.
 	flee: function(unitToFleeFrom) {
 		if (this.position() !== undefined && unitToFleeFrom.position() !== undefined) {
-			var FleeDirection = [unitToFleeFrom.position()[0] - this.position()[0],unitToFleeFrom.position()[1] - this.position()[1]];
+			var FleeDirection = [this.position()[0] - unitToFleeFrom.position()[0],this.position()[1] - unitToFleeFrom.position()[1]];
 			var dist = VectorDistance(unitToFleeFrom.position(), this.position() );
-			FleeDirection[0] = (FleeDirection[0]/dist) * 5;
-			FleeDirection[1] = (FleeDirection[1]/dist) * 5;
+			FleeDirection[0] = (FleeDirection[0]/dist) * 8;
+			FleeDirection[1] = (FleeDirection[1]/dist) * 8;
 			
 			Engine.PostCommand({"type": "walk", "entities": [this.id()], "x": this.position()[0] + FleeDirection[0]*5, "z": this.position()[1] + FleeDirection[1]*5, "queued": false});
 		}
@@ -676,7 +695,7 @@ var Entity = Class({
 		for (i in queue)
 		{
 			if (queue[i].progress < percentToStopAt)
-				   Engine.PostCommand({ "type": "stop-production", "entity": this.id(), "id": queue[i].id });
+				Engine.PostCommand({ "type": "stop-production", "entity": this.id(), "id": queue[i].id });
 		}
 		return this;
 	}

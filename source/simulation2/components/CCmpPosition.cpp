@@ -123,8 +123,6 @@ public:
 
 		m_RotX = m_RotY = m_RotZ = entity_angle_t::FromInt(0);
 		m_InterpolatedRotY = 0;
-
-		m_PositionChanged = false;
 	}
 
 	virtual void Deinit()
@@ -404,25 +402,13 @@ public:
 
 		// TODO: do something with m_AnchorType
 
-		CMatrix3D m;
-		CMatrix3D mXZ;
-		float Cos = cosf(rotY);
-		float Sin = sinf(rotY);
-
-		m.SetIdentity();
-		m._11 = -Cos;
-		m._13 = -Sin;
-		m._31 = Sin;
-		m._33 = -Cos;
-
-		mXZ.SetIdentity();
-		mXZ.SetXRotation(m_RotX.ToFloat());
-		mXZ.RotateZ(m_RotZ.ToFloat());
-		// TODO: is this all done in the correct order?
-		mXZ = m * mXZ;
-		mXZ.Translate(CVector3D(x, y, z));
-
-		return mXZ;
+        CMatrix3D m;
+		m.SetXRotation(m_RotX.ToFloat());
+		m.RotateZ(m_RotZ.ToFloat());
+		m.RotateY(rotY + (float)M_PI);
+		m.Translate(CVector3D(x, y, z));
+		
+		return m;
 	}
 
 	virtual void HandleMessage(const CMessage& msg, bool UNUSED(global))
@@ -444,9 +430,6 @@ public:
 			// Calculate new orientation, in a peculiar way in order to make sure the
 			// result gets close to m_orientation (rather than being n*2*M_PI out)
 			m_InterpolatedRotY = rotY + deltaClamped - delta;
-			
-			if (delta != 0)
-				m_PositionChanged = true;
 
 			break;
 		}
@@ -455,20 +438,13 @@ public:
 			// Store the positions from the turn before
 			m_PrevX = m_LastX;
 			m_PrevZ = m_LastZ;
-			
+
 			m_LastX = m_X;
 			m_LastZ = m_Z;
-
-			m_PositionChanged = m_X != m_PrevX || m_Z != m_PrevZ;
 
 			break;
 		}
 		}
-	}
-
-	virtual bool GetReinterpolate()
-	{
-		return m_PositionChanged;
 	}
 
 private:
@@ -484,10 +460,7 @@ private:
 			CMessagePositionChanged msg(GetEntityId(), false, entity_pos_t::Zero(), entity_pos_t::Zero(), entity_angle_t::Zero());
 			GetSimContext().GetComponentManager().PostMessage(GetEntityId(), msg);
 		}
-		m_PositionChanged = true;
 	}
-
-	bool m_PositionChanged;
 };
 
 REGISTER_COMPONENT_TYPE(Position)

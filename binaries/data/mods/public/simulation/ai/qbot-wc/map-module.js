@@ -1,6 +1,7 @@
 const TERRITORY_PLAYER_MASK = 0x3F;
 
 //TODO: Make this cope with negative cell values
+// This is by default a 16-bit map but can be adapted into 8-bit.
 function Map(gameState, originalMap, actualCopy){
 	// get the map to find out the correct dimensions
 	var gameMap = gameState.getMap();
@@ -8,6 +9,8 @@ function Map(gameState, originalMap, actualCopy){
 	this.height = gameMap.height;
 	this.length = gameMap.data.length;
 
+	this.maxVal = 65535;
+	
 	if (originalMap && actualCopy){
 		this.map = new Uint16Array(this.length);
 		for (var i = 0; i < originalMap.length; ++i)
@@ -19,6 +22,9 @@ function Map(gameState, originalMap, actualCopy){
 	}
 	this.cellSize = gameState.cellSize;
 }
+Map.prototype.setMaxVal = function(val){
+	this.maxVal = val;
+};
 
 Map.prototype.gamePosToMapPos = function(p){
 	return [Math.floor(p[0]/this.cellSize), Math.floor(p[1]/this.cellSize)];
@@ -29,6 +35,7 @@ Map.prototype.point = function(p){
 	return this.map[q[0] + this.width * q[1]];
 };
 
+// returns an 8-bit map.
 Map.createObstructionMap = function(gameState, template){
 	var passabilityMap = gameState.getMap();
 	var territoryMap = gameState.ai.territoryMap; 
@@ -52,8 +59,8 @@ Map.createObstructionMap = function(gameState, template){
 	
 	if (placementType == "shore")
 	{
-		// assume Dock, TODO.
-		var obstructionTiles = new Uint16Array(passabilityMap.data.length);
+		// TODO: this won't change much, should be cached, it's slow.
+		var obstructionTiles = new Uint8Array(passabilityMap.data.length);
 		var okay = false;
 		for (var x = 0; x < passabilityMap.width; ++x)
 		{
@@ -97,13 +104,13 @@ Map.createObstructionMap = function(gameState, template){
 					okay = false;
 				if ((passabilityMap.data[i] & (gameState.getPassabilityClassMask("building-shore") | gameState.getPassabilityClassMask("default"))))
 					okay = false;
-				obstructionTiles[i] = okay ? 65535 : 0;
+				obstructionTiles[i] = okay ? 255 : 0;
 			}
 		}
 	} else {
 		var playerID = PlayerID;
 		
-		var obstructionTiles = new Uint16Array(passabilityMap.data.length);
+		var obstructionTiles = new Uint8Array(passabilityMap.data.length);
 		for (var i = 0; i < passabilityMap.data.length; ++i)
 		{
 			var tilePlayer = (territoryMap.data[i] & TERRITORY_PLAYER_MASK);
@@ -116,11 +123,12 @@ Map.createObstructionMap = function(gameState, template){
 			var tileAccessible = (gameState.ai.myIndex === gameState.ai.accessibility.passMap[i]);
 			if (placementType === "shore")
 				tileAccessible = true;
-			obstructionTiles[i] = (!tileAccessible || invalidTerritory || (passabilityMap.data[i] & obstructionMask)) ? 0 : 65535;
+			obstructionTiles[i] = (!tileAccessible || invalidTerritory || (passabilityMap.data[i] & obstructionMask)) ? 0 : 255;
 		}
 	}
 		
 	var map = new Map(gameState, obstructionTiles);
+	map.setMaxVal(255);
 	
 	if (template && template.buildDistance()){
 		var minDist = template.buildDistance().MinDistance;
@@ -131,7 +139,7 @@ Map.createObstructionMap = function(gameState, template){
 					var pos = ent.position();
 					var x = Math.round(pos[0] / gameState.cellSize);
 					var z = Math.round(pos[1] / gameState.cellSize);
-					map.addInfluence(x, z, minDist/gameState.cellSize, -65535, 'constant');
+					map.addInfluence(x, z, minDist/gameState.cellSize, -255, 'constant');
 				}
 			});
 		}
@@ -196,11 +204,12 @@ Map.prototype.addInfluence = function(cx, cy, maxDist, strength, type) {
 					quant = str;
 					break;
 				}
-				if (-1 * quant > this.map[x + y * this.width]){
-					this.map[x + y * this.width] = 0; //set anything which would have gone negative to 0
-				}else{
+				if (this.map[x + y * this.width] + quant < 0)
+					this.map[x + y * this.width] = 0;
+				else if (this.map[x + y * this.width] + quant > this.maxVal)
+					this.map[x + y * this.width] = this.maxVal;	// avoids overflow.
+				else
 					this.map[x + y * this.width] += quant;
-				}
 			}
 		}
 	}
@@ -249,15 +258,17 @@ Map.prototype.multiplyInfluence = function(cx, cy, maxDist, strength, type) {
 						break;
 				}
 				var machin = this.map[x + y * this.width] * quant;
-				if (machin <= 0){
-					this.map[x + y * this.width] = 0; //set anything which would have gone negative to 0
-				}else{
+				if (machin < 0)
+					this.map[x + y * this.width] = 0;
+				else if (machin > this.maxVal)
+					this.map[x + y * this.width] = this.maxVal;
+				else
 					this.map[x + y * this.width] = machin;
-				}
 			}
 		}
 	}
 };
+// doesn't check for overflow.
 Map.prototype.setInfluence = function(cx, cy, maxDist, value) {
 	value = value ? value : 0;
 	
@@ -279,41 +290,17 @@ Map.prototype.setInfluence = function(cx, cy, maxDist, value) {
 	}
 };
 
-Map.prototype.sumInfluence = function(cx, cy, radius){
-	var x0 = Math.max(0, cx - radius);
-	var y0 = Math.max(0, cy - radius);
-	var x1 = Math.min(this.width, cx + radius);
-	var y1 = Math.min(this.height, cy + radius);
-	var radius2 = radius * radius;
-	
-	var sum = 0;
-	
-	for ( var y = y0; y < y1; ++y) {
-		for ( var x = x0; x < x1; ++x) {
-			var dx = x - cx;
-			var dy = y - cy;
-			var r2 = dx*dx + dy*dy;
-			if (r2 < radius2){
-				sum += this.map[x + y * this.width];
-			}
-		}
-	}
-	return sum;
-};
-
 /**
- * Make each cell's 16-bit value at least one greater than each of its
- * neighbours' values. (If the grid is initialised with 0s and 65535s, the
+ * Make each cell's 16-bit/8-bit value at least one greater than each of its
+ * neighbours' values. (If the grid is initialised with 0s and 65535s or 255s, the
  * result of each cell is its Manhattan distance to the nearest 0.)
- * 
- * TODO: maybe this should be 8-bit (and clamp at 255)?
  */
 Map.prototype.expandInfluences = function() {
 	var w = this.width;
 	var h = this.height;
 	var grid = this.map;
 	for ( var y = 0; y < h; ++y) {
-		var min = 65535;
+		var min = this.maxVal;
 		for ( var x = 0; x < w; ++x) {
 			var g = grid[x + y * w];
 			if (g > min)
@@ -334,7 +321,7 @@ Map.prototype.expandInfluences = function() {
 	}
 
 	for ( var x = 0; x < w; ++x) {
-		var min = 65535;
+		var min = this.maxVal;
 		for ( var y = 0; y < h; ++y) {
 			var g = grid[x + y * w];
 			if (g > min)
@@ -372,65 +359,20 @@ Map.prototype.findBestTile = function(radius, obstructionTiles){
 	return [bestIdx, bestVal];
 };
 
-// Multiplies current map by 3 if in my territory
-Map.prototype.multiplyTerritory = function(gameState,map,evenNeutral){
-	for (var i = 0; i < this.length; ++i){
-		if (map.getOwnerIndex(i) === PlayerID)
-			this.map[i] *= 2.5;
-		else if (map.getOwnerIndex(i) !== PlayerID && (map.getOwnerIndex(i) !== 0 || evenNeutral))
-			this.map[i] = 0;
-	}
-};
-
-// sets to 0 any enemy territory
-Map.prototype.annulateTerritory = function(gameState,map,evenNeutral){
-	for (var i = 0; i < this.length; ++i){
-		if (map.getOwnerIndex(i) !== PlayerID && (map.getOwnerIndex(i) !== 0 || evenNeutral))
-			this.map[i] = 0;
-	}
-};
-
-// Multiplies current map by the parameter map pixelwise
-Map.prototype.multiply = function(map, onlyBetter,divider,maxMultiplier){
-	for (var i = 0; i < this.length; ++i){
-		if (map.map[i]/divider > 1)
-			this.map[i] = Math.min(maxMultiplier*this.map[i], this.map[i] * (map.map[i]/divider));
-	}
-};
 // add to current map by the parameter map pixelwise
 Map.prototype.add = function(map){
-	for (var i = 0; i < this.length; ++i){
-		this.map[i] += +map.map[i];
-	}
-};
-// add to current map by the parameter map pixelwise with a multiplier
-Map.prototype.madd = function(map, multiplier){
-	for (var i = 0; i < this.length; ++i){
-		this.map[i] += +map.map[i]*multiplier;
-	}
-};
-// add to current map if the map is not null in that point
-Map.prototype.addIfNotNull = function(map){
-	for (var i = 0; i < this.length; ++i){
-		if (this.map[i] !== 0)
-			this.map[i] += +map.map[i];
-	}
-};
-// add to current map by the parameter map pixelwise
-Map.prototype.subtract = function(map){
-	for (var i = 0; i < this.length; ++i){
-		this.map[i] = this.map[i] - map.map[i] < 0 ? 0 : this.map[i] - map.map[i];
-	}
-};
-// add to current map by the parameter map pixelwise with a multiplier
-Map.prototype.subtractMultiplied = function(map,multiple){
-	for (var i = 0; i < this.length; ++i){
-		this.map[i] = this.map[i] - map.map[i]*multiple < 0 ? 0 : this.map[i] - map.map[i]*multiple;
+	for (var i = 0; i < this.length; ++i) {
+		if (this.map[i] + map.map[i] < 0)
+			this.map[i] = 0;
+		else if (this.map[i] + map.map[i] > this.maxVal)
+			this.map[i] = this.maxVal;
+		else
+			this.map[i] += map.map[i];
 	}
 };
 
 Map.prototype.dumpIm = function(name, threshold){
 	name = name ? name : "default.png";
-	threshold = threshold ? threshold : 65500;
+	threshold = threshold ? threshold : this.maxVal;
 	Engine.DumpImage(name, this.map, this.width, this.height, threshold);
 };

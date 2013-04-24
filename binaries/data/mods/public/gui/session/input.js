@@ -161,6 +161,7 @@ function findGatherType(gatherer, supply)
 
 function getActionInfo(action, target)
 {
+	var simState = GetSimState();
 	var selection = g_Selection.toList();
 
 	// If the selection doesn't exist, no action
@@ -202,11 +203,6 @@ function getActionInfo(action, target)
 	// e.g. prefer to attack an enemy unit, even if some friendly units are closer to the mouse)
 	var targetState = GetEntityState(target);
 
-	// Check if the target entity is a resource, dropsite, foundation, or enemy unit.
-	// Check if any entities in the selection can gather the requested resource,
-	// can return to the dropsite, can build the foundation, or can attack the enemy
-	var simState = Engine.GuiInterfaceCall("GetSimulationState");
-
 	// Look to see what type of command units going to the rally point should use
 	if (haveRallyPoints && action == "set-rallypoint")
 	{
@@ -217,6 +213,7 @@ function getActionInfo(action, target)
 		var playerState = simState.players[entState.player];
 		var playerOwned = (targetState.player == entState.player);
 		var allyOwned = playerState.isAlly[targetState.player];
+		var mutualAllyOwned = playerState.isMutualAlly[targetState.player];
 		var enemyOwned = playerState.isEnemy[targetState.player];
 		var gaiaOwned = (targetState.player == 0);
 
@@ -225,11 +222,15 @@ function getActionInfo(action, target)
 
 		// default to walking there
 		var data = {command: "walk"};
-		if (targetState.garrisonHolder && playerOwned)
+		if (targetState.garrisonHolder && (playerOwned || mutualAllyOwned))
 		{
 			data.command = "garrison";
 			data.target = target;
 			cursor = "action-garrison";
+			tooltip = "Current garrison: " + targetState.garrisonHolder.entities.length
+				+ "/" + targetState.garrisonHolder.capacity;
+			if (targetState.garrisonHolder.entities.length >= targetState.garrisonHolder.capacity)
+				tooltip = "[color=\"orange\"]" + tooltip + "[/color]";
 		}
 		else if (targetState.resourceSupply)
 		{
@@ -288,6 +289,9 @@ function getActionInfo(action, target)
 		return {"possible": true, "data": data, "position": targetState.position, "cursor": cursor, "tooltip": tooltip};
 	}
 
+	// Check if the target entity is a resource, dropsite, foundation, or enemy unit.
+	// Check if any entities in the selection can gather the requested resource,
+	// can return to the dropsite, can build the foundation, or can attack the enemy
 	for each (var entityID in selection)
 	{
 		var entState = GetEntityState(entityID);
@@ -297,6 +301,7 @@ function getActionInfo(action, target)
 		var playerState = simState.players[entState.player];
 		var playerOwned = (targetState.player == entState.player);
 		var allyOwned = playerState.isAlly[targetState.player];
+		var mutualAllyOwned = playerState.isMutualAlly[targetState.player];
 		var neutralOwned = playerState.isNeutral[targetState.player];
 		var enemyOwned = playerState.isEnemy[targetState.player];
 		var gaiaOwned = (targetState.player == 0);
@@ -308,14 +313,18 @@ function getActionInfo(action, target)
 		switch (action)
 		{
 		case "garrison":
-			if (hasClass(entState, "Unit") && targetState.garrisonHolder && playerOwned)
+			if (hasClass(entState, "Unit") && targetState.garrisonHolder && (playerOwned || mutualAllyOwned))
 			{
+				var tooltip = "Current garrison: " + targetState.garrisonHolder.entities.length
+					+ "/" + targetState.garrisonHolder.capacity;
+				if (targetState.garrisonHolder.entities.length >= targetState.garrisonHolder.capacity)
+					tooltip = "[color=\"orange\"]" + tooltip + "[/color]";
 				var allowedClasses = targetState.garrisonHolder.allowedClasses;
 				for each (var unitClass in entState.identity.classes)
 				{
 					if (allowedClasses.indexOf(unitClass) != -1)
 					{
-						return {"possible": true};
+						return {"possible": true, "tooltip": tooltip};
 					}
 				}
 			}
@@ -459,15 +468,16 @@ function determineAction(x, y, fromMinimap)
 		target = targets[0];
 	}
 
+	var actionInfo = undefined;
 	if (preSelectedAction != ACTION_NONE)
 	{
 		switch (preSelectedAction)
 		{
 		case ACTION_GARRISON:
-			if (getActionInfo("garrison", target).possible)
-				return {"type": "garrison", "cursor": "action-garrison", "target": target};
+			if ((actionInfo = getActionInfo("garrison", target)).possible)
+				return {"type": "garrison", "cursor": "action-garrison", "tooltip": actionInfo.tooltip, "target": target};
 			else
-				return 	{"type": "none", "cursor": "action-garrison-disabled", "target": undefined};
+				return {"type": "none", "cursor": "action-garrison-disabled", "target": undefined};
 			break;
 		case ACTION_REPAIR:
 			if (getActionInfo("repair", target).possible)
@@ -481,9 +491,9 @@ function determineAction(x, y, fromMinimap)
 	{
 		return {"type": "attack", "cursor": "action-attack", "target": target};
 	}
-	else if (Engine.HotkeyIsPressed("session.garrison") && getActionInfo("garrison", target).possible)
+	else if (Engine.HotkeyIsPressed("session.garrison") && (actionInfo = getActionInfo("garrison", target)).possible)
 	{
-		return {"type": "garrison", "cursor": "action-garrison", "target": target};
+		return {"type": "garrison", "cursor": "action-garrison", "tooltip": actionInfo.tooltip, "target": target};
 	}
 	else if (Engine.HotkeyIsPressed("session.attackmove") && getActionInfo("attack-move", target).possible)
 	{
@@ -491,7 +501,6 @@ function determineAction(x, y, fromMinimap)
 	}
 	else
 	{
-		var actionInfo = undefined;
 		if ((actionInfo = getActionInfo("setup-trade-route", target)).possible)
 			return {"type": "setup-trade-route", "cursor": "action-setup-trade-route", "tooltip": actionInfo.tooltip, "target": target};
 		else if ((actionInfo = getActionInfo("gather", target)).possible)
@@ -1170,14 +1179,14 @@ function handleInputAfterGui(ev)
 					{
 						// If double click hasn't already occurred, this is a double click.
 						// Select similar units regardless of rank
-						templateToMatch = Engine.GuiInterfaceCall("GetEntityState", selectedEntity).identity.selectionGroupName;
+						templateToMatch = GetEntityState(selectedEntity).identity.selectionGroupName;
 						if (templateToMatch)
 						{
 							matchRank = false;
 						}
 						else
 						{	// No selection group name defined, so fall back to exact match
-							templateToMatch = Engine.GuiInterfaceCall("GetEntityState", selectedEntity).template;
+							templateToMatch = GetEntityState(selectedEntity).template;
 						}
 
 						doubleClicked = true;
@@ -1188,7 +1197,7 @@ function handleInputAfterGui(ev)
 					{
 						// Double click has already occurred, so this is a triple click.
 						// Select units matching exact template name (same rank)
-						templateToMatch = Engine.GuiInterfaceCall("GetEntityState", selectedEntity).template;
+						templateToMatch = GetEntityState(selectedEntity).template;
 					}
 
 					// TODO: Should we handle "control all units" here as well?
@@ -1557,7 +1566,7 @@ function getEntityLimitAndCount(playerState, entType)
 // Add the unit shown at position to the training queue for all entities in the selection
 function addTrainingByPosition(position)
 {
-	var simState = Engine.GuiInterfaceCall("GetSimulationState");
+	var simState = GetSimState();
 	var playerState = simState.players[Engine.GetPlayerID()];
 	var selection = g_Selection.toList();
 
@@ -1732,6 +1741,8 @@ function performCommand(entity, commandName)
 		var unitName = getEntityName(template);
 
 		var playerID = Engine.GetPlayerID();
+		var simState = GetSimState();
+
 		if (entState.player == playerID || g_DevSettings.controlAll)
 		{
 			switch (commandName)
@@ -1775,6 +1786,18 @@ function performCommand(entity, commandName)
 				if (focusTarget !== null)
 					Engine.CameraMoveTo(focusTarget.x, focusTarget.z);
 				
+				break;
+			default:
+				break;
+			}
+		}
+		else if (simState.players[playerID].isMutualAlly[entState.player])
+		{
+			switch (commandName)
+			{
+			case "garrison":
+				inputState = INPUT_PRESELECTEDACTION;
+				preSelectedAction = ACTION_GARRISON;
 				break;
 			default:
 				break;

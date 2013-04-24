@@ -1,6 +1,8 @@
 function QBotAI(settings) {
 	BaseAI.call(this, settings);
 
+	Config.updateDifficulty(settings.difficulty);
+	
 	this.turn = 0;
 
 	this.playedTurn = 0;
@@ -66,8 +68,8 @@ QBotAI.prototype.InitShared = function(gameState, sharedScript) {
 	this.pathInfo = { "angle" : 0, "needboat" : true, "mkeyPos" : myKeyEntities.toEntityArray()[0].position(), "ekeyPos" : enemyKeyEntities.toEntityArray()[0].position() };
 	
 	// First path has a sampling of 3, which ensures we'll get at least one path even on Acropolis. The others are 6 so might fail.
-	var pos = [this.pathInfo.mkeyPos[0] + 200*Math.cos(this.pathInfo.angle),this.pathInfo.mkeyPos[1] + 200*Math.sin(this.pathInfo.angle)];
-	var path = this.pathFinder.getPath(this.pathInfo.ekeyPos, pos, 3, 3);// uncomment for debug:*/, 300000, gameState);
+	var pos = [this.pathInfo.mkeyPos[0] + 150*Math.cos(this.pathInfo.angle),this.pathInfo.mkeyPos[1] + 150*Math.sin(this.pathInfo.angle)];
+	var path = this.pathFinder.getPath(this.pathInfo.ekeyPos, pos, 2, 2);// uncomment for debug:*/, 300000, gameState);
 
 	//Engine.DumpImage("initialPath" + PlayerID + ".png", this.pathFinder.TotorMap.map, this.pathFinder.TotorMap.width,this.pathFinder.TotorMap.height,255);
 	
@@ -92,7 +94,7 @@ QBotAI.prototype.runInit = function(gameState, events){
 			this.modules[i].init(gameState, events);
 		}
 	}
-	debug ("inited");
+	debug ("Inited, diff is " + Config.difficulty);
 	this.timer = new Timer();
 	
 	
@@ -156,7 +158,7 @@ QBotAI.prototype.OnUpdate = function(sharedScript) {
 		// Delete creation events
 		delete this.savedEvents;
 		this.savedEvents = [];
-	} else if ((this.turn + this.player) % 10 == 0) {
+	} else if ((this.turn + this.player) % 8 == 5) {
 		
 		Engine.ProfileStart("Aegis bot");
 		
@@ -172,8 +174,8 @@ QBotAI.prototype.OnUpdate = function(sharedScript) {
 
 		if (this.pathInfo !== undefined)
 		{
-			var pos = [this.pathInfo.mkeyPos[0] + 200*Math.cos(this.pathInfo.angle),this.pathInfo.mkeyPos[1] + 200*Math.sin(this.pathInfo.angle)];
-			var path = this.pathFinder.getPath(this.pathInfo.ekeyPos, pos, 6, 6);// uncomment for debug:*/, 300000, gameState);
+			var pos = [this.pathInfo.mkeyPos[0] + 150*Math.cos(this.pathInfo.angle),this.pathInfo.mkeyPos[1] + 150*Math.sin(this.pathInfo.angle)];
+			var path = this.pathFinder.getPath(this.pathInfo.ekeyPos, pos, 6, 5);// uncomment for debug:*/, 300000, gameState);
 			if (path !== undefined && path[1] !== undefined && path[1] == false) {
 				// path is viable and doesn't require boating.
 				// blackzone the last two waypoints.
@@ -198,16 +200,21 @@ QBotAI.prototype.OnUpdate = function(sharedScript) {
 		
 		// try going up phases.
 		if (gameState.canResearch("phase_town",true) && gameState.getTimeElapsed() > (Config.Economy.townPhase*1000)
-			&& gameState.findResearchers("phase_town").length != 0 && this.queues.majorTech.length() === 0) {
+			&& gameState.findResearchers("phase_town",true).length != 0 && this.queues.majorTech.totalLength() === 0) {
 			this.queues.majorTech.addItem(new ResearchPlan(gameState, "phase_town",true));	// we rush the town phase.
 			debug ("Trying to reach town phase");
+			var nb = gameState.getOwnEntities().filter(Filters.byClass("Village")).length-1;
+			if (nb < 5)
+			{
+				while (nb < 5 && ++nb)
+					this.queues.house.addItem(new BuildingConstructionPlan(gameState, "structures/{civ}_house"));
+			}
 		} else if (gameState.canResearch("phase_city_generic",true) && gameState.getTimeElapsed() > (Config.Economy.cityPhase*1000)
-				&& gameState.findResearchers("phase_city_generic").length != 0 && this.queues.majorTech.length() === 0) {
+				&& gameState.getOwnEntitiesByRole("worker").length > 85
+				&& gameState.findResearchers("phase_city_generic", true).length != 0 && this.queues.majorTech.totalLength() === 0) {
 			debug ("Trying to reach city phase");
 			this.queues.majorTech.addItem(new ResearchPlan(gameState, "phase_city_generic"));
 		}
-
-		
 		// defcon cooldown
 		if (this.defcon < 5 && gameState.timeSinceDefconChange() > 20000)
 		{
@@ -223,7 +230,37 @@ QBotAI.prototype.OnUpdate = function(sharedScript) {
 		
 		this.queueManager.update(gameState);
 		
-		//if (this.playedTurn % 15 === 0)
+		/*
+		 // Use this to debug informations about the metadata.
+		if (this.playedTurn % 10 === 0)
+		{
+			// some debug informations about units.
+			var units = gameState.getOwnEntities();
+			for (var i in units._entities)
+			{
+				var ent = units._entities[i];
+				if (!ent.isIdle())
+					continue;
+				warn ("Unit " + ent.id() + " is a " + ent._templateName);
+				if (sharedScript._entityMetadata[PlayerID][ent.id()])
+				{
+					var metadata = sharedScript._entityMetadata[PlayerID][ent.id()];
+					for (j in metadata)
+					{
+						warn ("Metadata " + j);
+						if (typeof(metadata[j]) == "object")
+							warn ("Object");
+						else if (typeof(metadata[j]) == undefined)
+							warn ("Undefined");
+						else
+							warn(uneval(metadata[j]));
+					}
+				}
+			}
+		}*/
+
+			
+		//if (this.playedTurn % 5 === 0)
 		//	this.queueManager.printQueues(gameState);
 		
 		// Generate some entropy in the random numbers (against humans) until the engine gets random initialised numbers
@@ -260,9 +297,47 @@ QBotAI.prototype.chooseRandomStrategy = function()
 };
 
 // TODO: Remove override when the whole AI state is serialised
-QBotAI.prototype.Deserialize = function(data)
+// TODO: this currently is very much equivalent to "rungamestateinit" with a few hacks. Should deserialize/serialize properly someday.
+QBotAI.prototype.Deserialize = function(data, sharedScript)
 {
 	BaseAI.prototype.Deserialize.call(this, data);
+	
+	var ents = sharedScript.entities.filter(Filters.byOwner(PlayerID));
+	var myKeyEntities = ents.filter(function(ent) {
+		return ent.hasClass("CivCentre");
+	});
+	
+	if (myKeyEntities.length == 0){
+		myKeyEntities = sharedScript.entities.filter(Filters.byOwner(PlayerID));
+	}
+	
+	var filter = Filters.byClass("CivCentre");
+	var enemyKeyEntities = sharedScript.entities.filter(Filters.not(Filters.byOwner(PlayerID))).filter(filter);
+	
+	if (enemyKeyEntities.length == 0){
+		enemyKeyEntities = sharedScript.entities.filter(Filters.not(Filters.byOwner(PlayerID)));
+	}
+	
+	this.terrainAnalyzer = sharedScript.terrainAnalyzer;
+	this.passabilityMap = sharedScript.passabilityMap;
+
+	var fakeState = { "ai" : this, "sharedScript" : sharedScript };
+	this.pathFinder = new aStarPath(fakeState, false, true);
+	this.pathsToMe = [];
+	this.pathInfo = { "angle" : 0, "needboat" : true, "mkeyPos" : myKeyEntities.toEntityArray()[0].position(), "ekeyPos" : enemyKeyEntities.toEntityArray()[0].position() };
+	
+	// First path has a sampling of 3, which ensures we'll get at least one path even on Acropolis. The others are 6 so might fail.
+	var pos = [this.pathInfo.mkeyPos[0] + 150*Math.cos(this.pathInfo.angle),this.pathInfo.mkeyPos[1] + 150*Math.sin(this.pathInfo.angle)];
+	var path = this.pathFinder.getPath(this.pathInfo.ekeyPos, pos, 2, 2);
+	
+	if (path !== undefined && path[1] !== undefined && path[1] == false) {
+		// path is viable and doesn't require boating.
+		// blackzone the last two waypoints.
+		this.pathFinder.markImpassableArea(path[0][0][0],path[0][0][1],20);
+		this.pathsToMe.push(path[0][0][0]);
+		this.pathInfo.needboat = false;
+	}
+	this.pathInfo.angle += Math.PI/3.0;
 };
 
 // Override the default serializer

@@ -109,6 +109,11 @@ GameState.prototype.isResearched = function(template)
 {
 	return this.playerData.researchedTechs[template] !== undefined;
 };
+// true if started or queued
+GameState.prototype.isResearching = function(template)
+{
+	return (this.playerData.researchStarted[template] !== undefined || this.playerData.researchQueued[template] !== undefined);
+};
 
 // this is an absolute check that doesn't check if we have a building to research from.
 GameState.prototype.canResearch = function(techTemplateName, noRequirementCheck)
@@ -121,7 +126,7 @@ GameState.prototype.canResearch = function(techTemplateName, noRequirementCheck)
 	if (this.playerData.researchQueued[techTemplateName] || this.playerData.researchStarted[techTemplateName] || this.playerData.researchedTechs[techTemplateName])
 		return false;
 
-	if (noRequirementCheck === false)
+	if (noRequirementCheck === true)
 		return true;
 	
 	// not already researched, check if we can.
@@ -381,7 +386,7 @@ GameState.prototype.countEntitiesAndQueuedByType = function(type) {
 	// Count entities in building production queues
 	this.getOwnTrainingFacilities().forEach(function(ent){
 		ent.trainingQueue().forEach(function(item) {
-			if (item.template == type){
+			if (item.unitTemplate == type){
 				count += item.count;
 			}
 		});
@@ -471,18 +476,30 @@ GameState.prototype.findBuilders = function(template) {
  * Find buildings that are capable of researching the given tech, and aren't
  * already too busy.
  */
-GameState.prototype.findResearchers = function(templateName) {
+GameState.prototype.findResearchers = function(templateName, noRequirementCheck) {
 	// let's check we can research the tech.
-	if (!this.canResearch(templateName))
+	if (!this.canResearch(templateName, noRequirementCheck))
 		return [];
-	
+
 	var template = this.getTemplate(templateName);
+	var self = this;
 	
 	return this.getOwnResearchFacilities().filter(function(ent) { //}){
 		var techs = ent.researchableTechs();
-		if (!techs || (template.pair() && techs.indexOf(template.pair()) === -1) || (!template.pair() && techs.indexOf(templateName) === -1))
-			return false;
-		return true;
+		for (i in techs)
+		{
+			var thisTemp = self.getTemplate(techs[i]);
+			if (thisTemp.pairDef())
+			{
+				var pairedTechs = thisTemp.getPairedTechs();
+				if (pairedTechs[0]._templateName == templateName || pairedTechs[1]._templateName == templateName)
+					return true;
+			} else {
+				if (techs[i] == templateName)
+					return true;
+			}
+		}
+		return false;
 	});
 };
 

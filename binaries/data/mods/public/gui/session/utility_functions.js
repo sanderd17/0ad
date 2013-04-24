@@ -37,7 +37,7 @@ function getPlayerData(playerAssignments)
 {
 	var players = [];
 
-	var simState = Engine.GuiInterfaceCall("GetSimulationState");
+	var simState = GetSimState();
 	if (!simState)
 		return players;
 
@@ -62,6 +62,7 @@ function getPlayerData(playerAssignments)
 		    "teamsLocked": playerState.teamsLocked,
 		    "state": playerState.state,
 		    "isAlly": playerState.isAlly,
+		    "isMutualAlly": playerState.isMutualAlly,
 		    "isNeutral": playerState.isNeutral,
 		    "isEnemy": playerState.isEnemy,
 		    "guid": undefined, // network guid for players controlled by hosts

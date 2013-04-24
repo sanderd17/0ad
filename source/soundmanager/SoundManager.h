@@ -57,7 +57,6 @@ protected:
 	ISoundItem* m_CurrentTune;
 	ISoundItem* m_CurrentEnvirons;
 	CSoundManagerWorker* m_Worker;
-	ItemsMap* m_ItemsMap;
 	CMutex m_DistressMutex;
 
 	float m_Gain;
@@ -65,11 +64,14 @@ protected:
 	float m_AmbientGain;
 	float m_ActionGain;
 	bool m_Enabled;
-	long m_SourceCOunt;
 	long m_BufferSize;
 	int m_BufferCount;
 	bool m_MusicEnabled;
 	bool m_SoundEnabled;
+
+	bool m_MusicPaused;
+	bool m_AmbientPaused;
+	bool m_ActionPaused;
 
 	long m_DistressErrCount;
 	long m_DistressTime;
@@ -122,10 +124,17 @@ public:
 	void SetDistressThroughShortage();
 	void SetDistressThroughError();
 
+	void Pause(bool pauseIt);
+	void PauseMusic (bool pauseIt);
+	void PauseAmbient (bool pauseIt);
+	void PauseAction (bool pauseIt);
+
 protected:
 	void InitListener();
 	virtual Status AlcInit();
 
+private:
+	CSoundManager(CSoundManager* UNUSED(other)){};
 };
 
 #else // !CONFIG2_AUDIO

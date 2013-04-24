@@ -64,11 +64,13 @@ GuiInterface.prototype.GetSimulationState = function(player)
 		
 		// store player ally/neutral/enemy data as arrays
 		var allies = [];
+		var mutualAllies = [];
 		var neutrals = [];
 		var enemies = [];
 		for (var j = 0; j < n; ++j)
 		{
 			allies[j] = cmpPlayer.IsAlly(j);
+			mutualAllies[j] = cmpPlayer.IsMutualAlly(j);
 			neutrals[j] = cmpPlayer.IsNeutral(j);
 			enemies[j] = cmpPlayer.IsEnemy(j);
 		}
@@ -79,6 +81,7 @@ GuiInterface.prototype.GetSimulationState = function(player)
 			"popCount": cmpPlayer.GetPopulationCount(),
 			"popLimit": cmpPlayer.GetPopulationLimit(),
 			"popMax": cmpPlayer.GetMaxPopulation(),
+			"heroes": cmpPlayer.GetHeroes(),
 			"resourceCounts": cmpPlayer.GetResourceCounts(),
 			"trainingBlocked": cmpPlayer.IsTrainingBlocked(),
 			"state": cmpPlayer.GetState(),
@@ -86,6 +89,7 @@ GuiInterface.prototype.GetSimulationState = function(player)
 			"teamsLocked": cmpPlayer.GetLockTeams(),
 			"phase": phase,
 			"isAlly": allies,
+			"isMutualAlly": mutualAllies,
 			"isNeutral": neutrals,
 			"isEnemy": enemies,
 			"entityLimits": cmpPlayerEntityLimits.GetLimits(),
@@ -261,7 +265,9 @@ GuiInterface.prototype.GetEntityState = function(player, ent)
 			"max": cmpResourceSupply.GetMaxAmount(),
 			"amount": cmpResourceSupply.GetCurrentAmount(),
 			"type": cmpResourceSupply.GetType(),
-			"killBeforeGather": cmpResourceSupply.GetKillBeforeGather()
+			"killBeforeGather": cmpResourceSupply.GetKillBeforeGather(),
+			"maxGatherers": cmpResourceSupply.GetMaxGatherers(),
+			"gatherers": cmpResourceSupply.GetGatherers()
 		};
 	}
 
@@ -291,7 +297,8 @@ GuiInterface.prototype.GetEntityState = function(player, ent)
 	{
 		ret.garrisonHolder = {
 			"entities": cmpGarrisonHolder.GetEntities(),
-			"allowedClasses": cmpGarrisonHolder.GetAllowedClassesList()
+			"allowedClasses": cmpGarrisonHolder.GetAllowedClassesList(),
+			"capacity": cmpGarrisonHolder.GetCapacity()
 		};
 	}
 	
@@ -311,6 +318,9 @@ GuiInterface.prototype.GetEntityState = function(player, ent)
 			"state": cmpUnitAI.GetCurrentState(),
 			"orders": cmpUnitAI.GetOrders(),
 		};
+		// Add some information needed for ungarrisoning
+		if (cmpUnitAI.isGarrisoned && ret.player)
+			ret.template = "p" + ret.player + "&" + ret.template;
 	}
 	
 	var cmpGate = Engine.QueryInterface(ent, IID_Gate);
@@ -342,8 +352,13 @@ GuiInterface.prototype.GetEntityState = function(player, ent)
 	return ret;
 };
 
-GuiInterface.prototype.GetTemplateData = function(player, name)
+GuiInterface.prototype.GetTemplateData = function(player, extendedName)
 {
+	var name = extendedName;
+	// Special case for garrisoned units which have a extended template
+	if (extendedName.indexOf("&") != -1)
+		name = extendedName.slice(extendedName.indexOf("&")+1);
+
 	var cmpTemplateManager = Engine.QueryInterface(SYSTEM_ENTITY, IID_TemplateManager);
 	var template = cmpTemplateManager.GetTemplate(name);
 
