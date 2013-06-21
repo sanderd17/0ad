@@ -136,9 +136,9 @@ function resignMenuButton()
 	closeMenu();
 	closeOpenDialogs();
 	pauseGame();
-	var btCaptions = ["Yes", "No"];
+	var btCaptions = [translate("Yes"), translate("No")];
 	var btCode = [resignGame, resumeGame];
-	messageBox(400, 200, "Are you sure you want to resign?", "Confirmation", 0, btCaptions, btCode);
+	messageBox(400, 200, translate("Are you sure you want to resign?"), translate("Confirmation"), 0, btCaptions, btCode);
 }
 
 function exitMenuButton()
@@ -146,11 +146,10 @@ function exitMenuButton()
 	closeMenu();
 	closeOpenDialogs();
 	pauseGame();
-	var btCaptions = ["Yes", "No"];
+	var btCaptions = [translate("Yes"), translate("No")];
 	var btCode = [leaveGame, resumeGame];
-	messageBox(400, 200, "Are you sure you want to quit?", "Confirmation", 0, btCaptions, btCode);
+	messageBox(400, 200, translate("Are you sure you want to quit?"), translate("Confirmation"), 0, btCaptions, btCode);
 }
-
 
 function openDeleteDialog(selection)
 {
@@ -162,10 +161,10 @@ function openDeleteDialog(selection)
 		Engine.PostNetworkCommand({"type": "delete-entities", "entities": selectionArg});
 	};
 
-	var btCaptions = ["Yes", "No"];
+	var btCaptions = [translate("Yes"), translate("No")];
 	var btCode = [deleteSelectedEntities, resumeGame];
 
-	messageBox(400, 200, "Destroy everything currently selected?", "Delete", 0, btCaptions, btCode, [selection, null]);
+	messageBox(400, 200, translate("Destroy everything currently selected?"), translate("Delete"), 0, btCaptions, btCode, [selection, null]);
 }
 
 // Menu functions
@@ -269,10 +268,10 @@ function openDiplomacy()
 		Engine.GetGUIObjectByName("diplomacyPlayerName["+(i-1)+"]").caption = "[color=\"" + playerColor + "\"]" + players[i].name + "[/color]";
 		Engine.GetGUIObjectByName("diplomacyPlayerCiv["+(i-1)+"]").caption = g_CivData[players[i].civ].Name;
 
-		Engine.GetGUIObjectByName("diplomacyPlayerTeam["+(i-1)+"]").caption = (players[i].team < 0) ? "None" : players[i].team+1;
+		Engine.GetGUIObjectByName("diplomacyPlayerTeam["+(i-1)+"]").caption = (players[i].team < 0) ? translateWithContext("team", "None") : players[i].team+1;
 
 		if (i != we)
-			Engine.GetGUIObjectByName("diplomacyPlayerTheirs["+(i-1)+"]").caption = (players[i].isAlly[we] ? "Ally" : (players[i].isNeutral[we] ? "Neutral" : "Enemy"));
+			Engine.GetGUIObjectByName("diplomacyPlayerTheirs["+(i-1)+"]").caption = (players[i].isAlly[we] ? translate("Ally") : (players[i].isNeutral[we] ? translate("Neutral") : translate("Enemy")));
 
 		// Don't display the options for ourself, or if we or the other player aren't active anymore
 		if (i == we || players[we].state != "active" || players[i].state != "active")
@@ -333,25 +332,24 @@ function openDiplomacy()
 			if (setting == "ally")
 			{
 				if (players[we].isAlly[i])
-					button.caption = "x";
+					button.caption = translate("x");
 				else
 					button.caption = "";
 			}
 			else if (setting == "neutral")
 			{
 				if (players[we].isNeutral[i])
-					button.caption = "x";
+					button.caption = translate("x");
 				else
 					button.caption = "";
 			}
 			else // "enemy"
 			{
 				if (players[we].isEnemy[i])
-					button.caption = "x";
+					button.caption = translate("x");
 				else
 					button.caption = "";
 			}
-			
 			button.onpress = (function(e){ return function() { setDiplomacy(e) } })({"player": i, "to": setting});
 			button.hidden = false;
 		}
@@ -372,7 +370,7 @@ function toggleDiplomacy()
 		closeDiplomacy();
 	else
 		openDiplomacy();
-};
+}
 
 function openTrade()
 {
@@ -458,41 +456,45 @@ function openTrade()
 
 	var traderNumber = Engine.GuiInterfaceCall("GetTraderNumber");
 	var caption = "";
-	var comma = "";
 	if (traderNumber.landTrader.total == 0)
-		caption += "0";
+		caption = "0";
 	else
 	{
 		if (traderNumber.landTrader.trading > 0)
-		{
-			caption += traderNumber.landTrader.trading + " trading"
-			comma = ", ";
-		}
+			caption += sprintf(translate("%(numTrading)s trading"), { numTrading: traderNumber.landTrader.trading });
 		if (traderNumber.landTrader.garrisoned > 0)
 		{
-			caption += comma + traderNumber.landTrader.garrisoned + " garrisoned inside ships";
-			comma = ", ";
+			if (traderNumber.landTrader.trading > 0)
+				caption += sprintf(translate(", %(numGarrisoned)s garrisoned inside ships"), { numGarrisoned: traderNumber.landTrader.garrisoned });
+			else
+				caption += sprintf(translate("%(numGarrisoned)s garrisoned inside ships"), { numGarrisoned: traderNumber.landTrader.garrisoned });
 		}
 		var inactive = traderNumber.landTrader.total - traderNumber.landTrader.trading - traderNumber.landTrader.garrisoned;
 		if (inactive > 0)
-			caption += comma + "[color=\"orange\"]" + inactive + " inactive[/color]";
+		{
+			if (traderNumber.landTrader.trading > 0 || traderNumber.landTrader.garrisoned > 0)
+				caption += sprintf(translate(", [color=\"orange\"]%(numInactive)s inactive[/color]"), { numInactive: inactive });
+			else
+				caption += sprintf(translate("[color=\"orange\"]%(numInactive)s inactive[/color]"), { numIncatvie: inactive });
+		}
 	}
 	Engine.GetGUIObjectByName("landTraders").caption = caption;
 
 	caption = "";
-	comma = "";
 	if (traderNumber.shipTrader.total == 0)
-		caption += "0";
+		caption = "0";
 	else
 	{
 		if (traderNumber.shipTrader.trading > 0)
-		{
-			caption += traderNumber.shipTrader.trading + " trading"
-			comma = ", ";
-		}
+			caption += sprintf(translate("%(numTrading)s trading"), { numTrading: traderNumber.shipTrader.trading });
 		var inactive = traderNumber.shipTrader.total - traderNumber.shipTrader.trading;
 		if (inactive > 0)
-			caption += comma + "[color=\"orange\"]" + inactive + " inactive[/color]";
+		{
+			if (traderNumber.shipTrader.trading > 0)
+				caption += sprintf(translate(", [color=\"orange\"]%(numInactive)s inactive[/color]"), { numInactive: inactive });
+			else
+				caption += sprintf(translate("[color=\"orange\"]%(numInactive)s inactive[/color]"), { numInactive: inactive });
+		}
 	}
 	Engine.GetGUIObjectByName("shipTraders").caption = caption;
 
@@ -511,7 +513,7 @@ function toggleTrade()
 		closeTrade();
 	else
 		openTrade();
-};
+}
 
 function toggleGameSpeed()
 {
@@ -574,8 +576,10 @@ function toggleDeveloperOverlay()
 		return;
 
 	var devCommands = Engine.GetGUIObjectByName("devCommands");
-	var text = devCommands.hidden ? "opened." : "closed.";
-	submitChatDirectly("The Developer Overlay was " + text);
+	if (devCommands.hidden)
+		submitChatDirectly(translate("The Developer Overlay was opened."));
+	else
+		submitChatDirectly(translate("The Developer Overlay was closed."));
 	// Update the options dialog
 	Engine.GetGUIObjectByName("developerOverlayCheckbox").checked = devCommands.hidden;
 	devCommands.hidden = !devCommands.hidden;
@@ -593,6 +597,10 @@ function closeOpenDialogs()
 function formatTributeTooltip(player, resource, amount)
 {
 	var playerColor = player.color.r + " " + player.color.g + " " + player.color.b;
-	return "Tribute " + amount + " " + resource + " to [color=\"" + playerColor + "\"]" + player.name +
-		"[/color]. Shift-click to tribute " + (amount < 500 ? 500 : amount + 500) + ".";
+	return sprintf(translate("Tribute %(resourceAmount)s %(resourceType)s to %(playerName)s. Shift-click to tribute %(greaterAmount)s."), {
+		resourceAmount: amount,
+		resourceType: resource,
+		playerName: "[color=\"" + playerColor + "\"]" + player.name + "[/color]",
+		greaterAmount: (amount < 500 ? 500 : amount + 500)
+	});
 }
