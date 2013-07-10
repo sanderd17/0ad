@@ -6,7 +6,6 @@ const background = "hellenes1"; // Background type. Currently: 'hellenes1', 'per
 function init(initData)
 {
 	initMusic();
-
 	// Play main menu music
 	global.music.setState(global.music.states.MENU);
 
@@ -156,9 +155,6 @@ function onTick()
 	// Animate submenu
 	updateMenuPosition(tickLength);
 
-	// Update music state
-	global.music.updateTimer();
-
 	if (Engine.IsUserReportEnabled())
 	{
 		getGUIObjectByName("userReportEnabledText").caption = 
@@ -264,7 +260,7 @@ function blendSubmenuIntoMain(topPosition, bottomPosition)
 //function openOptionsTab(tabName)
 //{
 //	// Hide the other tabs.
-//	for (i = 1; i <= 3; i++)
+//	for (var i = 1; i <= 3; i++)
 //	{
 //		switch (i)
 //		{

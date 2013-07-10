@@ -364,10 +364,10 @@ var UnitFsmSpec = {
 			this.FinishOrder();
 			return;
 		}
-		this.attackType = type;
+		this.order.data.attackType = type;
 
 		// If we are already at the target, try attacking it from here
-		if (this.CheckTargetRange(this.order.data.target, IID_Attack, this.attackType))
+		if (this.CheckTargetRange(this.order.data.target, IID_Attack, this.order.data.attackType))
 		{
 			this.StopMoving();
 			// For packable units within attack range:
@@ -428,7 +428,7 @@ var UnitFsmSpec = {
 		}
 
 		// Try to move within attack range
-		if (this.MoveToTargetRange(this.order.data.target, IID_Attack, this.attackType))
+		if (this.MoveToTargetRange(this.order.data.target, IID_Attack, this.order.data.attackType))
 		{
 			// We've started walking to the given point
 			if (this.IsAnimal())
@@ -1180,7 +1180,8 @@ var UnitFsmSpec = {
 
 			"leave": function() {
 				var rangeMan = Engine.QueryInterface(SYSTEM_ENTITY, IID_RangeManager);
-				rangeMan.DisableActiveQuery(this.losRangeQuery);
+				if (this.losRangeQuery)
+					rangeMan.DisableActiveQuery(this.losRangeQuery);
 				if (this.losHealRangeQuery)
 					rangeMan.DisableActiveQuery(this.losHealRangeQuery);
 
@@ -1334,9 +1335,9 @@ var UnitFsmSpec = {
 			"UNPACKING": {
 				"enter": function() {
 					// If we're not in range yet (maybe we stopped moving), move to target again
-					if (!this.CheckTargetRange(this.order.data.target, IID_Attack, this.attackType))
+					if (!this.CheckTargetRange(this.order.data.target, IID_Attack, this.order.data.attackType))
 					{
-						if (this.MoveToTargetRange(this.order.data.target, IID_Attack, this.attackType))
+						if (this.MoveToTargetRange(this.order.data.target, IID_Attack, this.order.data.attackType))
 							this.SetNextState("APPROACHING");
 						else
 						{
@@ -1367,7 +1368,7 @@ var UnitFsmSpec = {
 			"ATTACKING": {
 				"enter": function() {
 					var cmpAttack = Engine.QueryInterface(this.entity, IID_Attack);
-					this.attackTimers = cmpAttack.GetTimers(this.attackType);
+					this.attackTimers = cmpAttack.GetTimers(this.order.data.attackType);
 
 					// If the repeat time since the last attack hasn't elapsed,
 					// delay this attack to avoid attacking too fast.
@@ -1379,8 +1380,8 @@ var UnitFsmSpec = {
 						prepare = Math.max(prepare, repeatLeft);
 					}
 
-					// add prefix + no Capital First Letter for this.attackType
-					var attackName = "attack_" + this.attackType.toLowerCase();
+					// add prefix + no capital first letter for attackType
+					var attackName = "attack_" + this.order.data.attackType.toLowerCase();
 					this.SelectAnimation(attackName, false, 1.0, "attack");
 					this.SetAnimationSync(prepare, this.attackTimers.repeat);
 					this.StartTimer(prepare, this.attackTimers.repeat);
@@ -1402,14 +1403,14 @@ var UnitFsmSpec = {
 					if (this.TargetIsAlive(target) && this.CanAttack(target, this.order.data.forceResponse || null))
 					{
 						// Check we can still reach the target
-						if (this.CheckTargetRange(target, IID_Attack, this.attackType))
+						if (this.CheckTargetRange(target, IID_Attack, this.order.data.attackType))
 						{
 							var cmpTimer = Engine.QueryInterface(SYSTEM_ENTITY, IID_Timer);
 							this.lastAttacked = cmpTimer.GetTime() - msg.lateness;
 
 							this.FaceTowardsTarget(target);
 							var cmpAttack = Engine.QueryInterface(this.entity, IID_Attack);
-							cmpAttack.PerformAttack(this.attackType, target);
+							cmpAttack.PerformAttack(this.order.data.attackType, target);
 
 							if (this.resyncAnimation)
 							{
@@ -1422,7 +1423,7 @@ var UnitFsmSpec = {
 						// Can't reach it - try to chase after it
 						if (this.ShouldChaseTargetedEntity(target, this.order.data.force))
 						{
-							if (this.MoveToTargetRange(target, IID_Attack, this.attackType))
+							if (this.MoveToTargetRange(target, IID_Attack, this.order.data.attackType))
 							{
 								this.SetNextState("COMBAT.CHASING");
 								return;
@@ -2070,20 +2071,28 @@ var UnitFsmSpec = {
 
 					this.order.data.force = false;
 
-					var target = this.order.data.target;
+					this.repairTarget = this.order.data.target;	// temporary, deleted in "leave".
 					// Check we can still reach and repair the target
-					if (!this.CheckTargetRange(target, IID_Builder) || !this.CanRepair(target))
+					if (!this.CheckTargetRange(this.repairTarget, IID_Builder) || !this.CanRepair(this.repairTarget))
 					{
 						// Can't reach it, no longer owned by ally, or it doesn't exist any more
 						this.FinishOrder();
 						return true;
 					}
-					else
+
+					// Check if the target is still repairable
+					var cmpHealth = Engine.QueryInterface(this.repairTarget, IID_Health);
+					if (cmpHealth && cmpHealth.GetHitpoints() >= cmpHealth.GetMaxHitpoints())
 					{
-						var cmpFoundation = Engine.QueryInterface(target, IID_Foundation);
-						if (cmpFoundation)
-							cmpFoundation.AddBuilder(this.entity);
+						// The building was already finished/fully repaired before we arrived;
+						// let the ConstructionFinished handler handle this.
+						this.OnGlobalConstructionFinished({"entity": this.repairTarget, "newentity": this.repairTarget});
+						return true;
 					}
+
+					var cmpFoundation = Engine.QueryInterface(this.repairTarget, IID_Foundation);
+					if (cmpFoundation)
+						cmpFoundation.AddBuilder(this.entity);
 
 					this.SelectAnimation("build", false, 1.0, "build");
 					this.StartTimer(1000, 1000);
@@ -2091,13 +2100,16 @@ var UnitFsmSpec = {
 				},
 
 				"leave": function() {
+					var cmpFoundation = Engine.QueryInterface(this.repairTarget, IID_Foundation);
+					if (cmpFoundation)
+						cmpFoundation.RemoveBuilder(this.entity);
+					delete this.repairTarget;
 					this.StopTimer();
 				},
 
 				"Timer": function(msg) {
-					var target = this.order.data.target;
 					// Check we can still reach and repair the target
-					if (!this.CheckTargetRange(target, IID_Builder) || !this.CanRepair(target))
+					if (!this.CheckTargetRange(this.repairTarget, IID_Builder) || !this.CanRepair(this.repairTarget))
 					{
 						// Can't reach it, no longer owned by ally, or it doesn't exist any more
 						this.FinishOrder();
@@ -2105,7 +2117,7 @@ var UnitFsmSpec = {
 					}
 					
 					var cmpBuilder = Engine.QueryInterface(this.entity, IID_Builder);
-					cmpBuilder.PerformBuilding(target);
+					cmpBuilder.PerformBuilding(this.repairTarget);
 				},
 			},
 
@@ -2556,18 +2568,9 @@ UnitAI.prototype.OnOwnershipChanged = function(msg)
 
 UnitAI.prototype.OnDestroy = function()
 {
-	// Clean up any timers that are now obsolete
-	this.StopTimer();
+	// Switch to an empty state to let states execute their leave handlers.
+	UnitFsm.SwitchToNextState(this, "");
 
-	// clear up the ResourceSupply gatherer count.
-	if (this.gatheringTarget)
-	{
-		var cmpSupply = Engine.QueryInterface(this.gatheringTarget, IID_ResourceSupply);
-		if (cmpSupply)
-			cmpSupply.RemoveGatherer(this.entity);
-		delete this.gatheringTarget;
-	}
-	
 	// Clean up range queries
 	var rangeMan = Engine.QueryInterface(SYSTEM_ENTITY, IID_RangeManager);
 	if (this.losRangeQuery)
@@ -2891,7 +2894,7 @@ UnitAI.prototype.AddOrders = function(orders)
 UnitAI.prototype.GetOrderData = function()
 {
 	var orders = [];
-	for (i in this.orderQueue) {
+	for (var i in this.orderQueue) {
 		if (this.orderQueue[i].data)
 			orders.push(deepcopy(this.orderQueue[i].data));
 		}
@@ -3448,7 +3451,8 @@ UnitAI.prototype.AttackEntityInZone = function(ents, forceResponse)
 	for each (var target in ents)
 	{
 		var type = this.GetBestAttackAgainst(target);
-		if (this.CanAttack(target, forceResponse) && this.CheckTargetDistanceFromHeldPosition(target, IID_Attack, type))
+		if (this.CanAttack(target, forceResponse) && this.CheckTargetDistanceFromHeldPosition(target, IID_Attack, type)
+		    && (this.GetStance().respondChaseBeyondVision || this.CheckTargetIsInVisionRange(target)))
 		{
 			this.PushOrderFront("Attack", { "target": target, "force": false, "forceResponse": forceResponse });
 			return true;
@@ -3518,7 +3522,7 @@ UnitAI.prototype.ShouldAbandonChase = function(target, force, iid)
 	// Stop if we're in hold-ground mode and it's too far from the holding point
 	if (this.GetStance().respondHoldGround)
 	{
-		if (!this.CheckTargetDistanceFromHeldPosition(target, iid, this.attackType))
+		if (!this.CheckTargetDistanceFromHeldPosition(target, iid, this.order.data.attackType))
 			return true;
 	}
 

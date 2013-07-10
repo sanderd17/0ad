@@ -61,7 +61,8 @@ ProductionQueue.prototype.Init = function()
 	//   }
 	
 	this.timer = undefined; // g_ProgressInterval msec timer, active while the queue is non-empty
-	
+	this.paused = false;
+
 	this.entityCache = [];
 	this.spawnNotified = false;
 };
@@ -75,6 +76,8 @@ ProductionQueue.prototype.GetEntitiesList = function()
 		return [];
 	
 	var string = this.template.Entities._string;
+	if (!string)
+		return [];
 	
 	// Replace the "{civ}" codes with this entity's civ ID
 	var cmpIdentity = Engine.QueryInterface(this.entity, IID_Identity);
@@ -93,6 +96,8 @@ ProductionQueue.prototype.GetTechnologiesList = function()
 		return [];
 	
 	var string = this.template.Technologies._string;
+	if (!string)
+		return [];
 	
 	var cmpTechnologyManager = QueryOwnerInterface(this.entity, IID_TechnologyManager);
 	if (!cmpTechnologyManager)
@@ -239,7 +244,7 @@ ProductionQueue.prototype.AddBatch = function(templateName, type, count, metadat
 			if (!template)
 				return;
 			var cmpPlayer = QueryOwnerInterface(this.entity, IID_Player);
-			var time = template.researchTime * cmpPlayer.cheatTimeMultiplier;
+			var time = template.researchTime * cmpPlayer.GetCheatTimeMultiplier();
 
 			var cost = {};
 			for each (var r in ["food", "wood", "stone", "metal"])
@@ -403,7 +408,7 @@ ProductionQueue.prototype.GetBatchTime = function(batchSize)
 	var batchTimeModifier = ApplyTechModificationsToEntity("ProductionQueue/BatchTimeModifier", +this.template.BatchTimeModifier, this.entity);
 
 	// TODO: work out what equation we should use here.
-	return Math.pow(batchSize, batchTimeModifier) * cmpPlayer.cheatTimeMultiplier;
+	return Math.pow(batchSize, batchTimeModifier) * cmpPlayer.GetCheatTimeMultiplier();
 };
 
 ProductionQueue.prototype.OnOwnershipChanged = function(msg)
@@ -535,6 +540,9 @@ ProductionQueue.prototype.SpawnUnits = function(templateName, count, metadata)
  */
 ProductionQueue.prototype.ProgressTimeout = function(data)
 {
+	// Check if the production is paused (eg the entity is garrisoned)
+	if (this.paused)
+		return;
 	// Allocate the 1000msecs to as many queue items as it takes
 	// until we've used up all the time (so that we work accurately
 	// with items that take fractions of a second)
@@ -650,6 +658,19 @@ ProductionQueue.prototype.ProgressTimeout = function(data)
 		var cmpTimer = Engine.QueryInterface(SYSTEM_ENTITY, IID_Timer);
 		this.timer = cmpTimer.SetTimeout(this.entity, IID_ProductionQueue, "ProgressTimeout", g_ProgressInterval, data);
 	}
-}
+};
+
+ProductionQueue.prototype.PauseProduction = function()
+{
+	this.timer = undefined;
+	this.paused = true;
+};
+
+ProductionQueue.prototype.UnpauseProduction = function()
+{
+	this.paused = false;
+	var cmpTimer = Engine.QueryInterface(SYSTEM_ENTITY, IID_Timer);
+	this.timer = cmpTimer.SetTimeout(this.entity, IID_ProductionQueue, "ProgressTimeout", g_ProgressInterval, {});
+};
 
 Engine.RegisterComponentType(IID_ProductionQueue, "ProductionQueue", ProductionQueue);

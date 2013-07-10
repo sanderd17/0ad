@@ -1,4 +1,4 @@
-/* Copyright (C) 2012 Wildfire Games.
+/* Copyright (C) 2013 Wildfire Games.
  * This file is part of 0 A.D.
  *
  * 0 A.D. is free software: you can redistribute it and/or modify
@@ -59,7 +59,10 @@ void CBufferItem::ReleaseOpenALBuffer()
 		AL_CHECK
 		delete[] al_buf;
 	}
-	alSourcei(m_ALSource, AL_BUFFER, NULL);
+	alSourcei(m_ALSource, AL_BUFFER, 0);
+	((CSoundManager*)g_SoundManager)->ReleaseALSource(m_ALSource);
+	AL_CHECK
+
 	m_ALSource = 0;
 }
 
@@ -74,8 +77,9 @@ bool CBufferItem::IdleTask()
 	{
 		CScopeLock lock(m_ItemMutex);
 		int proc_state;
-		alGetSourceiv(m_ALSource, AL_SOURCE_STATE, &proc_state);
+		alGetSourcei(m_ALSource, AL_SOURCE_STATE, &proc_state);
 		AL_CHECK
+		m_ShouldBePlaying = (proc_state != AL_STOPPED);
 		return (proc_state != AL_STOPPED);
 	}
 	

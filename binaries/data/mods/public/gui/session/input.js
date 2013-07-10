@@ -260,7 +260,7 @@ function getActionInfo(action, target)
 			cursor = "action-repair";
 		}
 		else if (hasClass(entState, "Market") && hasClass(targetState, "Market") && entState.id != targetState.id &&
-				(!hasClass(entState, "NavalMarket") || hasClass(targetState, "NavalMarket")))
+				(!hasClass(entState, "NavalMarket") || hasClass(targetState, "NavalMarket")) && !enemyOwned)
 		{
 			// Find a trader (if any) that this building can produce.
 			var trader;
@@ -277,7 +277,11 @@ function getActionInfo(action, target)
 				data.target = traderData.secondMarket;
 				data.source = traderData.firstMarket;
 				cursor = "action-setup-trade-route";
-				tooltip = "Click to establish a default route for new traders. Gain: " + gain + " metal.";
+				tooltip = "Click to establish a default route for new traders.";
+				if (trader)
+					tooltip += " Gain: " + gain + " metal.";
+				else // Foundation or cannot produce traders
+					tooltip += " Expected gain: " + gain + " metal.";
 			}
 		}
 
@@ -1451,7 +1455,8 @@ function handleMinimapEvent(target)
 			Engine.GuiInterfaceCall("DisplayRallyPoint", {
 				"entities": selection,
 				"x": target.x,
-				"z": target.z
+				"z": target.z,
+				"queued": queued
 			});
 			return true;
 
@@ -1464,8 +1469,11 @@ function handleMinimapEvent(target)
 
 // Called by GUI when user clicks construction button
 // @param buildTemplate Template name of the entity the user wants to build
-function startBuildingPlacement(buildTemplate)
+function startBuildingPlacement(buildTemplate, playerState)
 {
+	if(getEntityLimitAndCount(playerState, buildTemplate)[2] == 0)
+		return;
+
 	// TODO: we should clear any highlight selection rings here. If the mouse was over an entity before going onto the GUI
 	// to start building a structure, then the highlight selection rings are kept during the construction of the building.
 	// Gives the impression that somehow the hovered-over entity has something to do with the building you're constructing.
@@ -1498,6 +1506,33 @@ function selectTradingPreferredGoods(data)
 function exchangeResources(command)
 {
 	Engine.PostNetworkCommand({"type": "barter", "sell": command.sell, "buy": command.buy, "amount": command.amount});
+}
+
+// Camera jumping: when the user presses a hotkey the current camera location is marked.
+// When they press another hotkey the camera jumps back to that position. If the camera is already roughly at that location,
+// jump back to where it was previously.
+var jumpCameraPositions = [], jumpCameraLast;
+
+function jumpCamera(index)
+{
+	var position = jumpCameraPositions[index], distanceThreshold = g_ConfigDB.system["camerajump.threshold"];
+	if (position)
+	{
+		if (jumpCameraLast &&
+				Math.abs(Engine.CameraGetX() - position.x) < distanceThreshold &&
+				Math.abs(Engine.CameraGetZ() - position.z) < distanceThreshold)
+			Engine.CameraMoveTo(jumpCameraLast.x, jumpCameraLast.z);
+		else
+		{
+			jumpCameraLast = {x: Engine.CameraGetX(), z: Engine.CameraGetZ()};
+			Engine.CameraMoveTo(position.x, position.z);
+		}
+	}
+}
+
+function setJumpCamera(index)
+{
+	jumpCameraPositions[index] = {x: Engine.CameraGetX(), z: Engine.CameraGetZ()};
 }
 
 // Batch training:
@@ -1548,19 +1583,21 @@ function getBuildingsWhichCanTrainEntity(entitiesToCheck, trainEntType)
 function getEntityLimitAndCount(playerState, entType)
 {
 	var template = GetTemplateData(entType);
-	var trainingCategory = null;
+	var entCategory = null;
 	if (template.trainingRestrictions)
-		trainingCategory = template.trainingRestrictions.category;
-	var trainEntLimit = undefined;
-	var trainEntCount = undefined;
-	var canBeTrainedCount = undefined;
-	if (trainingCategory && playerState.entityLimits[trainingCategory])
+		entCategory = template.trainingRestrictions.category;
+	else if (template.buildRestrictions)
+		entCategory = template.buildRestrictions.category;
+	var entLimit = undefined;
+	var entCount = undefined;
+	var canBeAddedCount = undefined;
+	if (entCategory && playerState.entityLimits[entCategory])
 	{
-		trainEntLimit = playerState.entityLimits[trainingCategory];
-		trainEntCount = playerState.entityCounts[trainingCategory];
-		canBeTrainedCount = Math.max(trainEntLimit - trainEntCount, 0);
+		entLimit = playerState.entityLimits[entCategory];
+		entCount = playerState.entityCounts[entCategory];
+		canBeAddedCount = Math.max(entLimit - entCount, 0);
 	}
-	return [trainEntLimit, trainEntCount, canBeTrainedCount];
+	return [entLimit, entCount, canBeAddedCount];
 }
 
 // Add the unit shown at position to the training queue for all entities in the selection
@@ -2047,4 +2084,16 @@ function unloadAll()
 	});
 
 	Engine.PostNetworkCommand({"type": "unload-all", "garrisonHolders": garrisonHolders});
+}
+
+function clearSelection()
+{
+	if(inputState==INPUT_BUILDING_PLACEMENT || inputState==INPUT_BUILDING_WALL_PATHING)
+	{
+		inputState = INPUT_NORMAL;
+		placementSupport.Reset();
+	}
+	else
+		g_Selection.reset();
+	preSelectedAction = ACTION_NONE;
 }

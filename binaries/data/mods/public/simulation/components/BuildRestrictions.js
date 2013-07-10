@@ -17,6 +17,7 @@ BuildRestrictions.prototype.Schema =
 		"<choice>" +
 			"<value>land</value>" +
 			"<value>shore</value>" +
+			"<value>land-shore</value>"+
 		"</choice>" +
 	"</element>" +
 	"<element name='Territory' a:help='Specifies territory type restrictions for this building.'>" +
@@ -45,10 +46,13 @@ BuildRestrictions.prototype.Schema =
 			"<value>Temple</value>" +
 			"<value>Wall</value>" +
 			"<value>Fence</value>" +
-			"<value>Mill</value>" +
+			"<value>Storehouse</value>" +
 			"<value>Stoa</value>" +
 			"<value>Resource</value>" +
 			"<value>Special</value>" +
+			"<value>Wonder</value>" +
+			"<value>Apadana</value>" +
+			"<value>Embassy</value>" +
 		"</choice>" +
 	"</element>" +
 	"<optional>" +
@@ -76,7 +80,7 @@ BuildRestrictions.prototype.Init = function()
  *	2. Check foundation
  *		a. Doesn't obstruct foundation-blocking entities
  *		b. On valid terrain, based on passability class
- *	3. Territory type is allowed
+ *	3. Territory type is allowed (see note below)
  *	4. Dock is on shoreline and facing into water
  *	5. Distance constraints satisfied
  *
@@ -85,6 +89,10 @@ BuildRestrictions.prototype.Init = function()
  *		"success":	true iff the placement is valid, else false
  *		"message":	message to display in UI for invalid placement, else empty string
  *  }
+ *
+ * Note: The entity which is used to check this should be a preview entity
+ *  (template name should be "preview|"+templateName), as otherwise territory
+ *  checks for buildings with territory influence will not work as expected.
  */
 BuildRestrictions.prototype.CheckPlacement = function()
 {
@@ -123,7 +131,13 @@ BuildRestrictions.prototype.CheckPlacement = function()
 	case "shore":
 		passClassName = "building-shore";
 		break;
-		
+
+	case "land-shore":
+		// 'default' is everywhere a normal unit can go
+		// So on passable land, and not too deep in the water
+		passClassName = "default";
+		break;
+	
 	case "land":
 	default:
 		passClassName = "building-land";
@@ -132,8 +146,18 @@ BuildRestrictions.prototype.CheckPlacement = function()
 	var cmpObstruction = Engine.QueryInterface(this.entity, IID_Obstruction);
 	if (!cmpObstruction)
 		return result; // Fail
+	
+	
+	if (this.template.Category == "Wall")
+	{
+		// for walls, only test the center point
+		var ret = cmpObstruction.CheckFoundation(passClassName, true);
+	}
+	else
+	{
+		var ret = cmpObstruction.CheckFoundation(passClassName, false);
+	}
 
-	var ret = cmpObstruction.CheckFoundation(passClassName);
 	if (ret != "success")
 	{
 		switch (ret)
@@ -178,7 +202,7 @@ BuildRestrictions.prototype.CheckPlacement = function()
 	else if (isEnemy && !this.HasTerritory("enemy"))
 		territoryType = "enemy";
 	else
-		territoryFail = false
+		territoryFail = false;
 
 	if (territoryFail)
 	{

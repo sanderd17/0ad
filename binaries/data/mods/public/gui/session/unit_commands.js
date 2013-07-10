@@ -146,7 +146,7 @@ function formatLimitString(trainEntLimit, trainEntCount)
 {
 	if (trainEntLimit == undefined)
 		return "";
-	var text = "\n\nCurrent count: " + trainEntCount + ", limit: " + trainEntLimit + ".";
+	var text = "\n\nCurrent Count: " + trainEntCount + ", Limit: " + trainEntLimit + ".";
 	if (trainEntCount >= trainEntLimit)
 		text = "[color=\"red\"]" + text + "[/color]";
 	return text;
@@ -414,12 +414,19 @@ function setupUnitPanel(guiName, usedPanels, unitEntState, playerState, items, c
 				if (item.template)
 				{
 					var template = GetTemplateData(item.template);
-					tooltip += "\n" + getEntityCostTooltip(template);
+					var wallCount = g_Selection.toList().reduce(function (count, ent) {
+							var state = GetEntityState(ent);
+							if (hasClass(state, "LongWall") && !state.gate) 
+								count++;
+							return count;
+						}, 0);
+
+					tooltip += "\n" + getEntityCostTooltip(template, wallCount);
 
 					var affordableMask = getGUIObjectByName("unitGateUnaffordable["+i+"]");
 					affordableMask.hidden = true;
 
-					var neededResources = Engine.GuiInterfaceCall("GetNeededResources", template.cost);
+					var neededResources = Engine.GuiInterfaceCall("GetNeededResources", multiplyEntityCosts(template, wallCount));
 					if (neededResources)
 					{
 						affordableMask.hidden = false;
@@ -455,14 +462,14 @@ function setupUnitPanel(guiName, usedPanels, unitEntState, playerState, items, c
 				if (template.health)
 					tooltip += "\n[font=\"serif-bold-13\"]Health:[/font] " + template.health;
 				if (template.armour)
-					tooltip += "\n[font=\"serif-bold-13\"]Armour:[/font] " + damageTypesToText(template.armour);
+					tooltip += "\n[font=\"serif-bold-13\"]Armour:[/font] " + armorTypesToText(template.armour);
 				if (template.attack)
 					tooltip += "\n" + getEntityAttack(template);
 				if (template.speed)
 					tooltip += "\n" + getEntitySpeed(template);
 
-				var [trainEntLimit, trainEntCount, canBeTrainedCount] =
-					getEntityLimitAndCount(playerState, entType)
+				var [trainEntLimit, trainEntCount, canBeAddedCount] =
+					getEntityLimitAndCount(playerState, entType);
 				tooltip += formatLimitString(trainEntLimit, trainEntCount);
 
 				tooltip += formatBatchTrainingString(buildingsCountToTrainFullBatch, fullBatchSize, remainderBatch);
@@ -495,11 +502,15 @@ function setupUnitPanel(guiName, usedPanels, unitEntState, playerState, items, c
 				if (template.tooltip)
 					tooltip += "\n[font=\"serif-13\"]" + template.tooltip + "[/font]";
 
-				tooltip += "\n" + getEntityCostTooltip(template); // see utility_functions.js
-				tooltip += getPopulationBonusTooltip(template); // see utility_functions.js
+				tooltip += "\n" + getEntityCostTooltip(template);
+				tooltip += getPopulationBonusTooltip(template);
 
 				if (template.health)
 					tooltip += "\n[font=\"serif-bold-13\"]Health:[/font] " + template.health;
+
+				var [entLimit, entCount, canBeAddedCount] =
+					getEntityLimitAndCount(playerState, entType);
+				tooltip += formatLimitString(entLimit, entCount);
 
 				break;
 
@@ -669,7 +680,7 @@ function setupUnitPanel(guiName, usedPanels, unitEntState, playerState, items, c
 			button.enabled = true;
 			if (affordableMask)
 				affordableMask.hidden = true;	// actually used for the red "lack of resource" overlay, and darkening if unavailable. Sort of a hack.
-	
+
 			// In case this is an icon that would require tech checking, make sure we have the requirements.
 			if (guiName != SELECTION && guiName != GARRISON && guiName != QUEUE && template.requiredTechnology && !Engine.GuiInterfaceCall("IsTechnologyResearched", template.requiredTechnology))
 			{
@@ -685,6 +696,13 @@ function setupUnitPanel(guiName, usedPanels, unitEntState, playerState, items, c
 			{
 				button.enabled = false;
 				button.tooltip += "\n" + GetTechnologyData(entType).requirementsTooltip;
+				grayscale = "grayscale:";
+				affordableMask.hidden = false;
+				affordableMask.sprite = "colour: 0 0 0 127";
+			}
+
+			if ((guiName == CONSTRUCTION || guiName == TRAINING) && canBeAddedCount == 0)
+			{
 				grayscale = "grayscale:";
 				affordableMask.hidden = false;
 				affordableMask.sprite = "colour: 0 0 0 127";
@@ -777,20 +795,9 @@ function setupUnitPanel(guiName, usedPanels, unitEntState, playerState, items, c
 				var totalCosts = {};
 				var trainNum = 1;
 				var button_disableable = true;
+
 				if (guiName == TRAINING)
 				{
-					var trainingCategory = null;
-					if (template.trainingRestrictions)
-						trainingCategory = template.trainingRestrictions.category;
-					if (trainingCategory && playerState.entityLimits[trainingCategory] &&
-						playerState.entityCounts[trainingCategory] >= playerState.entityLimits[trainingCategory])
-					{
-						grayscale = "grayscale:";
-						affordableMask.hidden = false;
-						affordableMask.sprite = "colour: 0 0 0 100";
-					}
-					icon.sprite = "stretched:" + grayscale + "session/portraits/" + template.icon;
-
 					if (Engine.HotkeyIsPressed("session.batchtrain"))
 					{
 						var [buildingsCountToTrainFullBatch, fullBatchSize, remainderBatch, batchTrainingCount] =
@@ -811,14 +818,18 @@ function setupUnitPanel(guiName, usedPanels, unitEntState, playerState, items, c
 					if (button.enabled !== false)
 					{
 						button.enabled = (button_disableable ? false : true);
-						affordableMask.hidden = false;
+						// Don't display the red overlay if we can't even train/build it
+						if (canBeAddedCount != 0)
+						{
+							affordableMask.hidden = false;
 
-						var totalCost = 0;
-						for each (var resource in neededResources)
-							totalCost += resource;
-						var alpha = 50 + totalCost/10;
-						alpha = alpha > 125 ? 125 : alpha;
-						affordableMask.sprite = "colour: 255 0 0 " + (alpha);
+							var totalCost = 0;
+							for each (var resource in neededResources)
+								totalCost += resource;
+							var alpha = 50 + totalCost/10;
+							alpha = alpha > 125 ? 125 : alpha;
+							affordableMask.sprite = "colour: 255 0 0 " + (alpha);
+						}
 					}
 					button.tooltip += getNeededResourcesTooltip(neededResources);
 				}
@@ -887,13 +898,13 @@ function setupUnitPanel(guiName, usedPanels, unitEntState, playerState, items, c
 	}
 
 	// Hide any buttons we're no longer using
-	for (i = numButtons; i < g_unitPanelButtons[guiName]; ++i)
+	for (var i = numButtons; i < g_unitPanelButtons[guiName]; ++i)
 		getGUIObjectByName("unit"+guiName+"Button["+i+"]").hidden = true;
 
 	// Hide unused pair buttons and symbols
 	if (guiName == RESEARCH)
 	{
-		for (i = numButtons; i < g_unitPanelButtons[guiName]; ++i)
+		for (var i = numButtons; i < g_unitPanelButtons[guiName]; ++i)
 		{
 			getGUIObjectByName("unit"+guiName+"Button["+(i+rowLength)+"]").hidden = true;
 			getGUIObjectByName("unit"+guiName+"Pair["+i+"]").hidden = true;
@@ -1082,7 +1093,8 @@ function updateUnitCommands(entState, supplementalDetailsPanel, commandsPanel, s
 
 		// The first selected entity's type has priority.
 		if (entState.buildEntities)
-			setupUnitPanel(CONSTRUCTION, usedPanels, entState, playerState, buildableEnts, startBuildingPlacement);
+			setupUnitPanel(CONSTRUCTION, usedPanels, entState, playerState, buildableEnts, 
+				function (trainEntType) { startBuildingPlacement(trainEntType, playerState); } );
 		else if (entState.production && entState.production.entities)
 			setupUnitPanel(TRAINING, usedPanels, entState, playerState, trainableEnts,
 				function (trainEntType) { addTrainingToQueue(selection, trainEntType, playerState); } );
@@ -1188,7 +1200,8 @@ function updateUnitCommands(entState, supplementalDetailsPanel, commandsPanel, s
 			// The right pane is empty. Fill the pane with a sane type.
 			// Prefer buildables for units and trainables for structures.
 			if (buildableEnts.length && (hasClass(entState, "Unit") || !trainableEnts.length))
-				setupUnitPanel(CONSTRUCTION, usedPanels, entState, playerState, buildableEnts, startBuildingPlacement);
+				setupUnitPanel(CONSTRUCTION, usedPanels, entState, playerState, buildableEnts, 
+					function (trainEntType) { startBuildingPlacement(trainEntType, playerState); });
 			else if (trainableEnts.length)
 				setupUnitPanel(TRAINING, usedPanels, entState, playerState, trainableEnts,
 					function (trainEntType) { addTrainingToQueue(selection, trainEntType, playerState); } );

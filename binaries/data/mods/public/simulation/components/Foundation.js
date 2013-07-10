@@ -12,25 +12,10 @@ Foundation.prototype.Init = function()
 	// its obstruction once there's nothing in the way.
 	this.committed = false;
 
-	// Set up a timer so we can count the number of builders in a 1-second period.
-	// (We assume each builder only builds once per second, which is what UnitAI
-	// implements.)
-	var cmpTimer = Engine.QueryInterface(SYSTEM_ENTITY, IID_Timer);
-	this.timer = cmpTimer.SetInterval(this.entity, IID_Foundation, "UpdateTimeout", 1000, 1000, {});
-	this.recentBuilders = []; // builder entities since the last timeout
-	this.numRecentBuilders = 0; // number of builder entities as of the last timeout
+	this.builders = []; // builder entities
 	this.buildMultiplier = 1; // Multiplier for the amount of work builders do.
 	
 	this.previewEntity = INVALID_ENTITY;
-};
-
-Foundation.prototype.UpdateTimeout = function()
-{
-	this.numRecentBuilders = this.recentBuilders.length;
-	this.recentBuilders = [];
-	this.SetBuildMultiplier();
-
-	Engine.QueryInterface(this.entity, IID_Visual).SetVariable("numbuilders", this.numRecentBuilders);
 };
 
 Foundation.prototype.InitialiseConstruction = function(owner, template)
@@ -80,6 +65,11 @@ Foundation.prototype.GetBuildPercentage = function()
 	return Math.floor(this.GetBuildProgress() * 100);
 };
 
+Foundation.prototype.GetNumBuilders = function()
+{
+	return this.builders.length;
+};
+
 Foundation.prototype.IsFinished = function()
 {
 	return (this.GetBuildProgress() == 1.0);
@@ -115,39 +105,42 @@ Foundation.prototype.OnDestroy = function()
 				cmpStatisticsTracker.IncreaseResourceUsedCounter(r, -scaled);
 		}
 	}
-
-	// Reset the timer
-	var cmpTimer = Engine.QueryInterface(SYSTEM_ENTITY, IID_Timer);
-	cmpTimer.CancelTimer(this.timer);
 };
 
 /**
- * Adds a builder to the counter. Used indirectly by UnitAI to signal that
- * a unit has started the construction timer and will actually build soon.
+ * Adds a builder to the counter.
  */
 Foundation.prototype.AddBuilder = function(builderEnt)
 {
-	if (this.recentBuilders.indexOf(builderEnt) != -1)
-		return;
-
-	this.recentBuilders.push(builderEnt);
-	if (this.recentBuilders.length > this.numRecentBuilders)
+	if (this.builders.indexOf(builderEnt) === -1)
 	{
-		this.numRecentBuilders = this.recentBuilders.length;
+		this.builders.push(builderEnt);
+		Engine.QueryInterface(this.entity, IID_Visual).SetVariable("numbuilders", this.builders.length);
 		this.SetBuildMultiplier();
 	}
 };
 
+Foundation.prototype.RemoveBuilder = function(builderEnt)
+{
+	if (this.builders.indexOf(builderEnt) !== -1)
+ 	{
+		this.builders.splice(this.builders.indexOf(builderEnt),1);
+		Engine.QueryInterface(this.entity, IID_Visual).SetVariable("numbuilders", this.builders.length);
+ 		this.SetBuildMultiplier();
+ 	}
+ };
+
 /**
  * Sets the build rate multiplier, which is applied to all builders.
+ * Yields a total rate of construction equal to numBuilders^0.7
  */
 Foundation.prototype.SetBuildMultiplier = function()
 {
-	// Yields a total rate of construction equal to numRecentBuilders^0.7
-	if (this.numRecentBuilders)
-		this.buildMultiplier = Math.pow(this.numRecentBuilders, 0.7) / this.numRecentBuilders;
-	else
+	var numBuilders = this.builders.length;
+	if (numBuilders == 0)
 		this.buildMultiplier = 1;
+	else
+		this.buildMultiplier = Math.pow(numBuilders, 0.7) / numBuilders;
 };
 
 /**
@@ -176,6 +169,7 @@ Foundation.prototype.Build = function(builderEnt, work)
 			var collisions = cmpObstruction.GetEntityCollisions(true, true);
 			if (collisions.length)
 			{
+				var cmpFoundationOwnership = Engine.QueryInterface(this.entity, IID_Ownership);
 				for each (var ent in collisions)
 				{
 					var cmpUnitAI = Engine.QueryInterface(ent, IID_UnitAI);
@@ -183,10 +177,11 @@ Foundation.prototype.Build = function(builderEnt, work)
 						cmpUnitAI.LeaveFoundation(this.entity);
 					else
 					{
-						// If obstructing fauna is gaia but doesn't have UnitAI, just destroy it
+						// If obstructing fauna is gaia or our own but doesn't have UnitAI, just destroy it
 						var cmpOwnership = Engine.QueryInterface(ent, IID_Ownership);
 						var cmpIdentity = Engine.QueryInterface(ent, IID_Identity);
-						if (cmpOwnership && cmpIdentity && cmpOwnership.GetOwner() == 0 && cmpIdentity.HasClass("Animal"))
+						if (cmpOwnership && cmpIdentity && cmpIdentity.HasClass("Animal")
+						    && (cmpOwnership.GetOwner() == 0 || cmpFoundationOwnership && cmpOwnership.GetOwner() == cmpFoundationOwnership.GetOwner()))
 							Engine.DestroyEntity(ent);
 					}
 
@@ -244,9 +239,6 @@ Foundation.prototype.Build = function(builderEnt, work)
 	var cmpCost = Engine.QueryInterface(this.entity, IID_Cost);
 	var amount = work / cmpCost.GetBuildTime();
 
-	// Record this builder so we can count the total number
-	this.AddBuilder(builderEnt);
-
 	// Add an appropriate proportion of hitpoints
 	var cmpHealth = Engine.QueryInterface(this.entity, IID_Health);
 	var maxHealth = cmpHealth.GetMaxHitpoints();
@@ -278,6 +270,22 @@ Foundation.prototype.Build = function(builderEnt, work)
 		cmpBuildingPosition.SetYRotation(rot.y);
 		cmpBuildingPosition.SetXZRotation(rot.x, rot.z);
 		// TODO: should add a ICmpPosition::CopyFrom() instead of all this
+
+		var cmpRallyPoint = Engine.QueryInterface(this.entity, IID_RallyPoint);
+		var cmpBuildingRallyPoint = Engine.QueryInterface(building, IID_RallyPoint);
+		if(cmpRallyPoint && cmpBuildingRallyPoint)
+		{
+			var rallyCoords = cmpRallyPoint.GetPositions();
+			var rallyData = cmpRallyPoint.GetData();
+			var cmpBuildingRallyPointRenderer = Engine.QueryInterface(building, IID_RallyPointRenderer);
+			for (var i = 0; i < rallyCoords.length; ++i)
+			{
+				cmpBuildingRallyPoint.AddPosition(rallyCoords[i].x, rallyCoords[i].z);
+				cmpBuildingRallyPoint.AddData(rallyData[i]);
+				if (cmpBuildingRallyPointRenderer)
+					cmpBuildingRallyPointRenderer.AddPosition({'x': rallyCoords[i].x, 'y': rallyCoords[i].z});
+			}
+		}
 
 		// ----------------------------------------------------------------------
 		

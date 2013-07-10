@@ -260,7 +260,7 @@ function getSavedGameData()
 function restoreSavedGameData(data)
 {
 	// Restore control groups
-	for (groupNumber in data.groups)
+	for (var groupNumber in data.groups)
 	{
 		g_Groups.groups[groupNumber].groups = data.groups[groupNumber].groups;
 		g_Groups.groups[groupNumber].ents = data.groups[groupNumber].ents;
@@ -306,9 +306,6 @@ function onTick()
 
 	// Animate menu
 	updateMenuPosition(tickLength);
-
-	// Update music state
-	global.music.updateTimer();
 
 	// When training is blocked, flash population (alternates colour every 500msec)
 	if (g_IsTrainingBlocked && (Date.now() % 1000) < 500)
@@ -457,7 +454,7 @@ function updateHero()
 	// Setup tooltip
 	var tooltip = "[font=\"serif-bold-16\"]" + template.name.specific + "[/font]";
 	tooltip += "\n[font=\"serif-bold-13\"]Health:[/font] " + heroState.hitpoints + "/" + heroState.maxHitpoints;
-	tooltip += "\n[font=\"serif-bold-13\"]" + (heroState.attack ? heroState.attack.type + " " : type)
+	tooltip += "\n[font=\"serif-bold-13\"]" + (heroState.attack ? heroState.attack.type + " " : "")
 	           + "Attack:[/font] " + damageTypeDetails(heroState.attack);
 	// Show max attack range if ranged attack, also convert to tiles (4m per tile)
 	if (heroState.attack && heroState.attack.type == "Ranged")
@@ -647,12 +644,7 @@ function playRandomAmbient(type)
 //			currentAmbient = newRandomSound("ambient", "temperate_", "dayscape");
 
 			const AMBIENT = "audio/ambient/dayscape/day_temperate_gen_03.ogg";
-			currentAmbient = new AmbientSound(AMBIENT);
-
-			if (currentAmbient)
-			{
-				currentAmbient.loop();
-			}
+			Engine.PlayAmbientSound( AMBIENT, true );
 			break;
 
 		default:

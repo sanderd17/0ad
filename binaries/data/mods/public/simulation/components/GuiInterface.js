@@ -239,7 +239,8 @@ GuiInterface.prototype.GetEntityState = function(player, ent)
 	if (cmpFoundation)
 	{
 		ret.foundation = {
-			"progress": cmpFoundation.GetBuildPercentage()
+			"progress": cmpFoundation.GetBuildPercentage(),
+			"numBuilders": cmpFoundation.GetNumBuilders()
 		};
 	}
 
@@ -1447,7 +1448,7 @@ GuiInterface.prototype.GetFoundationSnapData = function(player, data)
 		var minDistEntitySnapData = null;
 		var radius2 = data.snapRadius * data.snapRadius;
 		
-		for each (ent in data.snapEntities)
+		for each (var ent in data.snapEntities)
 		{
 			var cmpPosition = Engine.QueryInterface(ent, IID_Position);
 			if (!cmpPosition || !cmpPosition.IsInWorld())

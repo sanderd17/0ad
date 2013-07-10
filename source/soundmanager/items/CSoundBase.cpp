@@ -1,4 +1,4 @@
-/* Copyright (C) 2012 Wildfire Games.
+/* Copyright (C) 2013 Wildfire Games.
  * This file is part of 0 A.D.
  *
  * 0 A.D. is free software: you can redistribute it and/or modify
@@ -44,9 +44,9 @@ void CSoundBase::ReleaseOpenAL()
 	if (m_ALSource != 0)
 	{
 		AL_CHECK
-		alSourcei(m_ALSource, AL_BUFFER, NULL);
+		alSourcei(m_ALSource, AL_BUFFER, 0L);
 		AL_CHECK
-		g_SoundManager->ReleaseALSource(m_ALSource);
+		((CSoundManager*)g_SoundManager)->ReleaseALSource(m_ALSource);
 		AL_CHECK
 		m_ALSource = 0;
 	}
@@ -74,7 +74,8 @@ void CSoundBase::ResetVars()
 	m_EndFadeTime = 0;
 	m_StartVolume = 0;
 	m_EndVolume = 0;
-
+	m_ShouldBePlaying = false;
+	m_IsPaused = false;
 	ResetFade();
 }
 
@@ -84,15 +85,18 @@ void CSoundBase::ResetFade()
 	m_EndFadeTime = 0;
 	m_StartVolume = 0;
 	m_EndVolume = 0;
-	m_ShouldBePlaying = false;
 	m_PauseAfterFade = false;
 }
 
+bool CSoundBase::Finished()
+{
+  return !m_ShouldBePlaying && !IsPlaying();
+}
 
 bool CSoundBase::InitOpenAL()
 {
 	alGetError(); /* clear error */
-	m_ALSource = g_SoundManager->GetALSource( this );
+	m_ALSource = ((CSoundManager*)g_SoundManager)->GetALSource( this );
 
 	AL_CHECK
 
@@ -141,7 +145,7 @@ void CSoundBase::SetRollOff(ALfloat rolls)
 
 void CSoundBase::EnsurePlay()
 {
-	if (m_ShouldBePlaying && !IsPlaying())
+	if (m_ShouldBePlaying && !m_IsPaused && !IsPlaying())
 		Play();
 }
 
@@ -187,7 +191,7 @@ bool CSoundBase::IsPlaying()
 	{
 		CScopeLock lock(m_ItemMutex);
 		int proc_state;
-		alGetSourceiv(m_ALSource, AL_SOURCE_STATE, &proc_state);
+		alGetSourcei(m_ALSource, AL_SOURCE_STATE, &proc_state);
 		AL_CHECK
 
 		return (proc_state == AL_PLAYING);
@@ -275,6 +279,7 @@ void CSoundBase::Play()
 	CScopeLock lock(m_ItemMutex);
 
 	m_ShouldBePlaying = true;
+	m_IsPaused = false;
 	AL_CHECK
 	if (m_ALSource != 0)
 	{
@@ -283,9 +288,9 @@ void CSoundBase::Play()
 		if (err != AL_NO_ERROR)
 		{
 			if (err == AL_INVALID)
-				g_SoundManager->SetDistressThroughError();
+				((CSoundManager*)g_SoundManager)->SetDistressThroughError();
 			else
-				g_SoundManager->al_ReportError(err, __func__, __LINE__);
+				((CSoundManager*)g_SoundManager)->al_ReportError(err, __func__, __LINE__);
 		}
 	}
 }
@@ -329,7 +334,7 @@ void CSoundBase::FadeToIn(ALfloat newVolume, double fadeDuration)
 	if (m_ALSource != 0)
 	{		
 		ALenum proc_state;
-		alGetSourceiv(m_ALSource, AL_SOURCE_STATE, &proc_state);
+		alGetSourcei(m_ALSource, AL_SOURCE_STATE, &proc_state);
 		if (proc_state == AL_PLAYING)
 		{
 			m_StartFadeTime = timer_Time();
@@ -339,16 +344,6 @@ void CSoundBase::FadeToIn(ALfloat newVolume, double fadeDuration)
 		}
 		AL_CHECK
 	}
-}
-
-void CSoundBase::PlayAsMusic()
-{
-	g_SoundManager->SetMusicItem(this);
-}
-
-void CSoundBase::PlayAsAmbient()
-{
-	g_SoundManager->SetAmbientItem(this);
 }
 
 void CSoundBase::Stop()
@@ -366,7 +361,7 @@ void CSoundBase::Stop()
 	}
 }
 
-CStrW* CSoundBase::GetName()
+Path* CSoundBase::GetName()
 {
 	if ( m_SoundData )
 		return m_SoundData->GetFileName();
@@ -378,6 +373,7 @@ void CSoundBase::Pause()
 {
   if (m_ALSource != 0)
   {
+		m_IsPaused = true;
     alSourcePause(m_ALSource);
     AL_CHECK
   }
