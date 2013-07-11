@@ -81,7 +81,7 @@
       <object name="gamesBox"
         style="StoneList"
         type="olist"
-        size="350 0 100% 100%-50"
+        size="350 0 100% 100%-40"
         tooltip_style="pgFloatingToolTip"
         sprite_heading="colour:0 0 0 255"
         textcolor="210 100 0 255">
@@ -135,7 +135,7 @@
 
       </object>
 
-      <object name="gamesBar" size="350 100%-40 100% 100%">
+      <object name="gamesBar" size="350 100%-35 100% 100%">
         <object type="button" style="StoneButton" size="0 0 20 20">
           >>
           <action on="Press"><![CDATA[
@@ -155,17 +155,8 @@
           </action>
         </object>
 
-        <object name="updateStatusText" size="100%-340 0 100%-140 20" type="text" style="RightLabelText"/>
+        
 
-        <object name="hostButton" type="button" style="StoneButton" size="100%-100 0 100% 20">
-          Host Game
-          <action on="Press">
-          <![CDATA[
-            // Open Multiplayer connection window with host option.
-            Engine.PushGuiPage("page_gamesetup_mp.xml", { multiplayerGameType: "host", name: g_Name });
-          ]]>
-          </action>
-        </object>
       </object>
 
     </object>
@@ -177,7 +168,7 @@
         size="100%-200 0 100% 100%-40"
         tooltip_style="pgFloatingToolTip"
         sprite_heading="colour:0 0 0 255">
-        <def id="status" heading="S" color="0 60 60" width="30"/>
+        <def id="status" heading="Status" color="0 60 60" width="50"/>
         <def id="name" heading="Name" color="0 60 0" width="50"/>
       </object>
 
@@ -193,8 +184,18 @@
         </object>
       </object>
     </object>
-
       <object name="navBar" size="20 25 100%-20 45">
+        <object name="updateStatusText" size="100%-440 0 100%-240 20" type="text" style="RightLabelText"/>
+        <object name="hostButton" type="button" style="StoneButton" size="100%-220 0 100%-120 20">
+          Host Game
+          <action on="Press">
+          <![CDATA[
+            // Open Multiplayer connection window with host option.
+            Engine.PushGuiPage("page_gamesetup_mp.xml", { multiplayerGameType: "host", name: g_Name });
+          ]]>
+          </action>
+        </object>
+        <!--
         <object type="button" style="StoneButton" size="100%-340 0 100%-240 20">
           Connect
           <action on="Press">lobbyConnect();</action>
@@ -203,7 +204,7 @@
         <object type="button" style="StoneButton" size="100%-220 0 100%-120 20">
           Disconnect
           <action on="Press">lobbyDisconnect();</action>
-        </object>
+        </object>-->
 
         <object type="button" style="StoneButton" size="100%-100 0 100% 20">
           Main Menu

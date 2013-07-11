@@ -174,7 +174,7 @@ function updatePlayerList()
 	for each (p in playerList)
 	{
 		list_name.push(p.name == nickname ? '[color="orange"]'+p.name+'[/color]' : p.name);
-		list_status.push(p.presence == "playing" ? "p" : "a");
+		list_status.push(p.presence == "playing" ? "P" : "A");
 	}
 
 	var playersBox = getGUIObjectByName("playersBox")
@@ -311,7 +311,7 @@ function onTick()
 		switch (message.type)
 		{
 			case "mucmessage":
-				addChatMessage({ "from": message.from, "text": message.text , "color": "50 50 50"});
+				addChatMessage({ "from": message.from, "text": message.text , "color": "250 250 250"});
 				break;
 			case "system":
 				switch (message.level)
