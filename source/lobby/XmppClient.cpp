@@ -108,11 +108,19 @@ XmppClient::XmppClient(ScriptInterface& scriptInterface, std::string sUsername, 
     _client = new Client(clientJid, sPassword);
   else
     _client = new Client(sServer);
+
+  // Disable TLS as we haven't set a certificate on the server yet
   _client->setTls(TLSDisabled);
+
+  // Disable use of the SASL PLAIN mechanism, to prevent leaking credentials
+  // if the server doesn't list any supported SASL mechanism or the response
+  // has been modified to exclude those.
+  const int mechs = SaslMechAll ^ SaslMechPlain;
+  _client->setSASLMechanisms(mechs);
 
   _client->registerConnectionListener( this );
   _client->setPresence(Presence::Available, -1);
-  _client->disco()->setVersion( "TestProg", "1.0" );
+  _client->disco()->setVersion( "Pyrogenesis", "1.0" );
   _client->disco()->setIdentity( "client", "bot" );
   _client->setCompression(false);
 
@@ -120,10 +128,6 @@ XmppClient::XmppClient(ScriptInterface& scriptInterface, std::string sUsername, 
   _client->registerIqHandler( this, ExtGameListQuery);
 
   _client->registerMessageHandler( this );
-
-  StringList ca;
-  ca.push_back( "/path/to/cacert.crt" );
-  _client->setCACerts( ca );
 
   // Uncomment to see the raw stanzas
   //_client->logInstance().registerLogHandler( LogLevelDebug, LogAreaAll, this );

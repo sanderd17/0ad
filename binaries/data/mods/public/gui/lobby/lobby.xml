@@ -90,7 +90,7 @@
         <!--<def id="ip" heading="IP" color="0 128 128" width="170"/>-->
         <def id="mapName" heading="Map name" color="128 128 128" width="120"/>
         <def id="mapSize" heading="Map size" color="128 128 128" width="100"/>
-        <def id="victoryCondition" heading="Victory condition" color="0 128 128" width="140"/>
+        <def id="victoryCondition" heading="Victory" color="0 128 128" width="100"/>
         <def id="nPlayers" heading="Players" color="0 128 128" width="30"/>
       </object>
 
