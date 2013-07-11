@@ -23,10 +23,15 @@
 // and defines what is necessary in order to compile the lobby
 #define _WINDOWS_
 
+#ifndef OUT
+#define OUT
+#endif
+
 	//Taken from WinDef.h
-#define CONST               const
+#define CONST const
 typedef unsigned char UCHAR;
 typedef UCHAR *PUCHAR;
+typedef unsigned short USHORT;
 typedef unsigned long ULONG;
 typedef ULONG *PULONG;
 #define OPTIONAL
@@ -122,7 +127,7 @@ public:
 protected:
   /* Xmpp handlers */
   /* MUC handlers */
-  virtual void handleMUCParticipantPresence(gloox::MUCRoom*, gloox::MUCRoomParticipant, const gloox::Presence&);
+  virtual void handleMUCParticipantPresence(gloox::MUCRoom*, const gloox::MUCRoomParticipant, const gloox::Presence&);
   virtual bool handleMUCRoomCreation(gloox::MUCRoom*) {return false;}
   virtual void handleMUCSubject(gloox::MUCRoom*, const std::string&, const std::string&) {}
   virtual void handleMUCInviteDecline(gloox::MUCRoom*, const gloox::JID&, const std::string&) {}

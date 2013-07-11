@@ -176,7 +176,7 @@ void XmppClient::recv()
 /*
  *  MUC Handlers
  */
-void XmppClient::handleMUCParticipantPresence(gloox::MUCRoom*, gloox::MUCRoomParticipant participant, const gloox::Presence& presence)
+void XmppClient::handleMUCParticipantPresence(gloox::MUCRoom*, const gloox::MUCRoomParticipant participant, const gloox::Presence& presence)
 {  
   //std::string jid = participant.jid->full();
   std::string nick = participant.nick->resource();
