@@ -44,7 +44,6 @@ function init(attribs)
 function lobbyStop()
 {
 	Engine.StopXmppClient();
-	clearTimeout(spamTimer);
 }
 
 function lobbyConnect()
@@ -405,7 +404,7 @@ function addChatMessage(msg)
 	var from = escapeText(msg.from);
 	var text = escapeText(msg.text);
 	var color = msg.color;
-	
+
 	if(updateSpamandDetect(text, from))
 		return;
 	var formatted = '[font="serif-bold-13"]<[color="'+ color +'"]' + from + '[/color]>[/font] ' + text;
