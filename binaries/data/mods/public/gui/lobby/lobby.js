@@ -101,11 +101,11 @@ function updateGameList()
 {
 	var gamesBox = getGUIObjectByName("gamesBox");
 	var gameList = Engine.GetGameList();
-	//Store the game whole game list data so that we can access it later
-	//to update the game info panel.
+	// Store the game whole game list data so that we can access it later
+	// to update the game info panel.
 	g_GameList = gameList;
 
-	//Sort the list of games to that games 'waiting' are displayed at the top
+	// Sort the list of games to that games 'waiting' are displayed at the top
 	g_GameList.sort(function (a,b) {
 		return a.state == 'waiting' ? -1 : b.state == 'waiting' ? +1 : 0;
 
@@ -151,7 +151,7 @@ function updateGameList()
 	}
 
 	gamesBox.list_name = list_name;
-	//gamesBox.list_ip = list_ip;
+	// gamesBox.list_ip = list_ip;
 	gamesBox.list_mapName = list_mapName;
 	gamesBox.list_mapSize = list_mapSize;
 	gamesBox.list_victoryCondition = list_victoryCondition;
@@ -216,7 +216,7 @@ function selectGame(selected)
 	getGUIObjectByName("gameInfo").hidden = false;
 	getGUIObjectByName("gameInfoEmpty").hidden = true;
 
-	//Get the selected map's name
+	// Get the selected map's name
 	var gamesBox = getGUIObjectByName("gamesBox");
 	var g = gamesBox.list_data[selected];
 	var name = g_GameList[g].mapName;
@@ -224,7 +224,7 @@ function selectGame(selected)
 
 	var mapData = null;
 
-	//Search the selectep map in the scenarios
+	// Search the selected map in the scenarios
 	var mapFiles = getXMLFileList("maps/scenarios/");
 	for (var i = 0; i < mapFiles.length; ++i)
 	{
@@ -236,7 +236,7 @@ function selectGame(selected)
 		}
 	}
 
-	//Search the selectep map in the scenarios
+	// Search for the selected map in the random maps
 	if(!mapData)
 	{
 		var mapFiles = getJSONFileList("maps/random/");
@@ -316,10 +316,10 @@ function twoDigits(n)
 
 function onTick()
 {
-	//Wake up XmppClient
+	// Wake up XmppClient
 	Engine.RecvXmppClient();
 
-	//Receive messages
+	// Receive messages
 	while (true)
 	{
 		var message = Engine.LobbyGuiPollMessage();
