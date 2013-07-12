@@ -302,10 +302,8 @@ function joinSelectedGame()
 function tilesToMapSize(tiles)
 {
 	var s = g_mapSizes.tiles.indexOf(Number(tiles));
-	if (s == -1)
-		return "?";
-	if (s == 0)
-		return "Scenario";
+	if (s == 0 || s == -1)
+		return "Unavalible";
 	return g_mapSizes.names[s].split(" ")[0];
 }
 
