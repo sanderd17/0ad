@@ -87,16 +87,16 @@
         sprite_heading="colour:0 0 0 255"
         textcolor="210 100 0 255">
         <action on="SelectionChange"> selectGame(this.selected);</action>
-        <def id="name" heading="Name" color="0 60 0" width="200"/>
+        <def id="name" heading="Name" color="0 60 0" width="180"/>
         <!--<def id="ip" heading="IP" color="0 128 128" width="170"/>-->
-        <def id="mapName" heading="Map name" color="128 128 128" width="120"/>
+        <def id="mapName" heading="Map name" color="128 128 128" width="140"/>
         <def id="mapSize" heading="Map size" color="128 128 128" width="100"/>
         <def id="victoryCondition" heading="Victory" color="0 128 128" width="100"/>
         <def id="nPlayers" heading="Players" color="0 128 128" width="30"/>
       </object>
 
       <!-- START Filter panel -->
-      <object name="filterPanel" size="380 100%-140 890 100%-10" type="image" sprite="BackgroundIndentFillDark" hidden="true">
+      <object name="filterPanel" size="380 100%-140 700 100%-10" type="image" sprite="BackgroundIndentFillDark" hidden="true">
         <object type="text" size="10 10 110 30" text_align="left" textcolor="white">Map size :</object>
         <object name="mapSizeFilter"
           type="dropdown"
@@ -152,7 +152,7 @@
           {
             this.caption = ">>";
             getGUIObjectByName("filterPanel").hidden = true;
-            getGUIObjectByName("gamesBox").size="350 0 100% 100%-50";
+            getGUIObjectByName("gamesBox").size="350 0 100% 100%-40";
           }
           ]]>
           </action>
@@ -166,9 +166,9 @@
       <object name="playersBox"
         style="StoneList"
         type="olist"
-        size="100%-200 0 100% 100%-40"
+        size="100%-210 0 100% 100%-10"
         tooltip_style="pgFloatingToolTip"
-        sprite_heading="colour:0 0 0 255">
+        sprite_heading="colour:0 0 0">
         <def id="status" heading="Status" color="0 60 60" width="50"/>
         <def id="name" heading="Name" color="0 60 0" width="50"/>
       </object>

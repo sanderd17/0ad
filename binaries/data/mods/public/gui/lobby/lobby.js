@@ -136,8 +136,8 @@ function updateGameList()
 	{
 		if(displayGame(g, mapSizeFilter, playersNumberFilter, victoryConditionFilter, hideFullFilter))
 		{
-			// Highlight games 'waiting' for this player
-			var name = (g.state != 'waiting') ? toTitleCase(g.name) : '[color="orange"]' + toTitleCase(g.name) + '[/color]';
+			// Highlight games 'waiting' for this player, otherwise display as green
+			var name = (g.state != 'waiting') ? '[color="0 125 0"]' + g.name + '[/color]' : '[color="orange"]' + toTitleCase(g.name) + '[/color]';
 			list_name.push(name);
 			list_ip.push(g.ip);
 			list_mapName.push(toTitleCase(g.mapName));
@@ -173,8 +173,25 @@ function updatePlayerList()
 
 	for each (p in playerList)
 	{
-		list_name.push(p.name == nickname ? '[color="orange"]'+p.name+'[/color]' : p.name);
-		list_status.push(p.presence == "playing" ? "P" : "A");
+		// Set colors based on player status
+		if (p.presence == "playing")
+		{
+			var name = '[color="125 0 0"]' + p.name + '[/color]';
+			var status = '[color="125 0 0"]P[/color]';
+		}
+		else
+		{
+			var name = '[color="0 125 0"]' + p.name + '[/color]';
+			var status = '[color="0 125 0"]A[/color]';
+		}
+		// Highlight the local player's nickname
+		if (p.name == nickname)
+		{
+			var name = '[color="orange"]' + p.name + '[/color]';
+		}
+		// Push this player's name and staus onto the list
+		list_name.push(name);
+		list_status.push(status);
 	}
 
 	var playersBox = getGUIObjectByName("playersBox")
