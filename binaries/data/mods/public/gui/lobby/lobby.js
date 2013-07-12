@@ -302,7 +302,11 @@ function joinSelectedGame()
 function tilesToMapSize(tiles)
 {
 	var s = g_mapSizes.tiles.indexOf(Number(tiles));
-	return s != -1 ? g_mapSizes.names[s].split(" ")[0] : "?";
+	if (s == -1)
+		return "?";
+	if (s == 0)
+		return "Scenario";
+	return g_mapSizes.names[s].split(" ")[0];
 }
 
 function twoDigits(n)
