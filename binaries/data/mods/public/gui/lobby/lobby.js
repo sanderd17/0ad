@@ -302,7 +302,9 @@ function joinSelectedGame()
 function tilesToMapSize(tiles)
 {
 	var s = g_mapSizes.tiles.indexOf(Number(tiles));
-	return s != -1 ? g_mapSizes.names[s].split(" ")[0] : "?";
+	if (s == 0 || s == -1)
+		return "-";
+	return g_mapSizes.names[s].split(" ")[0];
 }
 
 function twoDigits(n)
