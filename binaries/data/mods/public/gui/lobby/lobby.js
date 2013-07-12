@@ -1,6 +1,8 @@
 var g_ChatMessages = [];
 var g_Name = "unknown Bob";
 var g_GameList = {};
+var g_spamMonitor = {};
+var g_spammers = {};
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 var g_mapSizes = {};
@@ -28,6 +30,10 @@ function init(attribs)
 
 	Engine.LobbySetPlayerPresence("available");
 	Engine.SendGetGameList();
+	
+	resetFilters();
+	var spamMonitorTimer = setTimeout(clearSpamMonitor, 5000);
+	var spammerTimer = setTimeout(clearSpammers, 30000);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -38,6 +44,7 @@ function init(attribs)
 function lobbyStop()
 {
 	Engine.StopXmppClient();
+	clearTimeout(spamTimer);
 }
 
 function lobbyConnect()
@@ -66,9 +73,9 @@ function lobbyRefreshGameList()
 function resetFilters()
 {
 	// Reset states of gui objects
-	getGUIObjectByName("mapSizeFilter").selected = -1;
-	getGUIObjectByName("playersNumberFilter").selected = -1;
-	getGUIObjectByName("victoryConditionFilter").selected = -1;
+	getGUIObjectByName("mapSizeFilter").selected = 7;
+	getGUIObjectByName("playersNumberFilter").selected = 7;
+	getGUIObjectByName("victoryConditionFilter").selected = 1;
 	getGUIObjectByName("hideFullFilter").checked = true;
 
 	// Update the list of games
@@ -161,6 +168,9 @@ function updateGameList()
 
 	if (gamesBox.selected >= gamesBox.list_name.length)
 		gamesBox.selected = -1;
+	// If game selected, update info box about the game.
+	if(getGUIObjectByName("gamesBox").selected != -1)
+		selectGame(getGUIObjectByName("gamesBox").selected);
 }
 
 function updatePlayerList()
@@ -177,12 +187,12 @@ function updatePlayerList()
 		if (p.presence == "playing")
 		{
 			var name = '[color="125 0 0"]' + p.name + '[/color]';
-			var status = '[color="125 0 0"]P[/color]';
+			var status = '[color="125 0 0"]Busy[/color]';
 		}
 		else
 		{
 			var name = '[color="0 125 0"]' + p.name + '[/color]';
-			var status = '[color="0 125 0"]A[/color]';
+			var status = '[color="0 125 0"]Online[/color]';
 		}
 		// Highlight the local player's nickname
 		if (p.name == nickname)
@@ -303,7 +313,7 @@ function tilesToMapSize(tiles)
 {
 	var s = g_mapSizes.tiles.indexOf(Number(tiles));
 	if (s == 0 || s == -1)
-		return "Unavalible";
+		return "Unavailable";
 	return g_mapSizes.names[s].split(" ")[0];
 }
 
@@ -320,7 +330,10 @@ function onTick()
 {
 	// Wake up XmppClient
 	Engine.RecvXmppClient();
-
+	
+	// Update Timers
+	updateTimers();
+	
 	// Receive messages
 	while (true)
 	{
@@ -392,8 +405,49 @@ function addChatMessage(msg)
 	var from = escapeText(msg.from);
 	var text = escapeText(msg.text);
 	var color = msg.color;
-
+	
+	if(updateSpamandDetect(text, from))
+		return;
 	var formatted = '[font="serif-bold-13"]<[color="'+ color +'"]' + from + '[/color]>[/font] ' + text;
 	g_ChatMessages.push(formatted);
 	getGUIObjectByName("chatText").caption = g_ChatMessages.join("\n");
+}
+
+// The following function tracks message stats and returns true if the input text is spam.
+function updateSpamandDetect(text, from)
+{
+	// Check for blank lines.
+	if (text == " ")
+		return true;
+	// Update the spam monitor.
+	if (g_spamMonitor[from])
+		g_spamMonitor[from]++;
+	else
+		g_spamMonitor[from] = 1;
+	if (g_spamMonitor[from] > 5)
+		g_spammers[from] = true
+	// Block spammers and notify the player if they are blocked.
+	if(from in g_spammers)
+	{
+		if (from == Engine.GetDefaultPlayerName())
+		{
+			addChatMessage({ "from": "system", "text": "Please do not spam. You have been blocked for thirty seconds.", "color": "125 0 0" });
+		}
+		return true;
+	}
+	// Return false if everything is clear.
+	return false;
+}
+
+// Timers to clear spammers after some time.
+function clearSpamMonitor()
+{
+	g_spamMonitor = {};
+	spamTimer = setTimeout(clearSpamMonitor, 5000);
+}
+
+function clearSpammers()
+{
+	g_spammers = {};
+	spammerTimer = setTimeout(clearSpammers, 30000);
 }

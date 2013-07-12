@@ -5,7 +5,7 @@
 
   <script file="gui/common/functions_global_object.js"/>
   <script file="gui/common/functions_utility.js"/>
-
+  <script file="gui/common/timer.js"/>
   <object type="image" style="StoneWindow" size="0 0 100% 100%" name="lobbyWindow">
 
     <object style="TitleText" type="text" size="50%-128 0%+4 50%+128 36">
@@ -165,7 +165,7 @@
         size="100%-210 0 100% 100%-10"
         tooltip_style="pgFloatingToolTip"
         sprite_heading="colour:0 0 0">
-        <def id="status" heading="Status" color="0 60 60" width="50"/>
+        <def id="status" heading="Status" color="0 60 60" width="60"/>
         <def id="name" heading="Name" color="0 60 0" width="50"/>
       </object>
 
