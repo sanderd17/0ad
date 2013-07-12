@@ -28,6 +28,8 @@ function init(attribs)
 
 	Engine.LobbySetPlayerPresence("available");
 	Engine.SendGetGameList();
+
+	resetFilters();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -66,9 +68,9 @@ function lobbyRefreshGameList()
 function resetFilters()
 {
 	// Reset states of gui objects
-	getGUIObjectByName("mapSizeFilter").selected = -1;
-	getGUIObjectByName("playersNumberFilter").selected = -1;
-	getGUIObjectByName("victoryConditionFilter").selected = -1;
+	getGUIObjectByName("mapSizeFilter").selected = getGUIObjectByName("mapSizeFilter").list.length - 1;
+	getGUIObjectByName("playersNumberFilter").selected = getGUIObjectByName("playersNumberFilter").list.length - 1;
+	getGUIObjectByName("victoryConditionFilter").selected = getGUIObjectByName("victoryConditionFilter").list.length - 1;
 	getGUIObjectByName("hideFullFilter").checked = true;
 
 	// Update the list of games
@@ -161,6 +163,10 @@ function updateGameList()
 
 	if (gamesBox.selected >= gamesBox.list_name.length)
 		gamesBox.selected = -1;
+
+	// If game selected, update info box about the game.
+	if(getGUIObjectByName("gamesBox").selected != -1)
+		selectGame(getGUIObjectByName("gamesBox").selected)
 }
 
 function updatePlayerList()
@@ -177,12 +183,12 @@ function updatePlayerList()
 		if (p.presence == "playing")
 		{
 			var name = '[color="125 0 0"]' + p.name + '[/color]';
-			var status = '[color="125 0 0"]P[/color]';
+			var status = '[color="125 0 0"]Busy[/color]';
 		}
 		else
 		{
 			var name = '[color="0 125 0"]' + p.name + '[/color]';
-			var status = '[color="0 125 0"]A[/color]';
+			var status = '[color="0 125 0"]Online[/color]';
 		}
 		// Highlight the local player's nickname
 		if (p.name == nickname)
@@ -302,10 +308,8 @@ function joinSelectedGame()
 function tilesToMapSize(tiles)
 {
 	var s = g_mapSizes.tiles.indexOf(Number(tiles));
-	if (s == -1)
-		return "?";
-	if (s == 0)
-		return "Scenario";
+	if (s == 0 || s == -1)
+		return "-";
 	return g_mapSizes.names[s].split(" ")[0];
 }
 
