@@ -349,10 +349,10 @@ function onTick()
 {
 	// Wake up XmppClient
 	Engine.RecvXmppClient();
-	
+
 	// Update Timers
 	updateTimers();
-	
+
 	// Receive messages
 	while (true)
 	{
