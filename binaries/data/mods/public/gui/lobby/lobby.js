@@ -32,11 +32,11 @@ function init(attribs)
 
 	Engine.LobbySetPlayerPresence("available");
 	Engine.SendGetGameList();
-	
+
 	resetFilters();
 	var spamMonitorTimer = setTimeout(clearSpamMonitor, 5000);
 	var spammerTimer = setTimeout(clearSpammers, 30000);
-	
+
 	g_IRCConfig = g_ConfigDB.system["lobby.ircCommands"];
 }
 
@@ -76,9 +76,9 @@ function lobbyRefreshGameList()
 function resetFilters()
 {
 	// Reset states of gui objects
-	getGUIObjectByName("mapSizeFilter").selected = 7;
-	getGUIObjectByName("playersNumberFilter").selected = 7;
-	getGUIObjectByName("victoryConditionFilter").selected = 1;
+	getGUIObjectByName("mapSizeFilter").selected = getGUIObjectByName("mapSizeFilter").list.length - 1;
+	getGUIObjectByName("playersNumberFilter").selected = getGUIObjectByName("playersNumberFilter").list.length - 1;
+	getGUIObjectByName("victoryConditionFilter").selected = getGUIObjectByName("victoryConditionFilter").list.length - 1;
 	getGUIObjectByName("hideFullFilter").checked = true;
 
 	// Update the list of games
@@ -171,9 +171,10 @@ function updateGameList()
 
 	if (gamesBox.selected >= gamesBox.list_name.length)
 		gamesBox.selected = -1;
+
 	// If game selected, update info box about the game.
 	if(getGUIObjectByName("gamesBox").selected != -1)
-		selectGame(getGUIObjectByName("gamesBox").selected);
+		selectGame(getGUIObjectByName("gamesBox").selected)
 }
 
 function updatePlayerList()
@@ -331,7 +332,7 @@ function tilesToMapSize(tiles)
 {
 	var s = g_mapSizes.tiles.indexOf(Number(tiles));
 	if (s == 0 || s == -1)
-		return "Unavailable";
+		return "-";
 	return g_mapSizes.names[s].split(" ")[0];
 }
 
