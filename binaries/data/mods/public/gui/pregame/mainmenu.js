@@ -19,7 +19,7 @@ function init(initData)
 	// Only show splash screen(s) once
 	if (initData && initData.isStartup)
 	{
-		if (Engine.IsSplashScreenEnabled())
+		if (g_ConfigDB.user["splashscreenenable"] === "true")
 			Engine.PushGuiPage("page_splashscreen.xml", { "page": "splashscreen" } );
 
 		// Warn about removing fixed render path

@@ -39,7 +39,7 @@
       </object>
       <object name="connectUsername" type="input" size="210 80 100%-32 104" style="StoneInput">
         <action on="Load"><![CDATA[
-          this.caption = Engine.GetDefaultLobbyPlayerUsername();
+          this.caption = g_ConfigDB.user["lobby.login"];
         ]]></action>
       </object>
       <object type="text" size="0 120 200 150" style="RightLabelText">
@@ -47,7 +47,7 @@
       </object>
       <object name="connectPassword" type="input" size="210 120 100%-32 144" style="StoneInput">
         <action on="Load"><![CDATA[
-          this.caption = Engine.GetDefaultLobbyPlayerPassword();
+          this.caption = g_ConfigDB.user["lobby.password"];
         ]]></action>
       </object>
       <object name="connectFeedback" type="text" style="CenteredLabelText" size="32 150 100%-32 180" textcolor="red"/>

@@ -184,20 +184,6 @@ std::wstring GetDefaultPlayerName(void* UNUSED(cbdata))
 	return L"anonymous";
 }
 
-std::wstring GetDefaultMPServer(void* UNUSED(cbdata))
-{
-	CStr server;
-	CFG_GET_VAL("multiplayerserver", String, server);
-	return server.FromUTF8();
-}
-
-void SaveMPConfig(void* UNUSED(cbdata), std::wstring playerName, std::wstring server)
-{
-	g_ConfigDB.CreateValue(CFG_USER, "playername")->m_String = CStrW(playerName).ToUTF8();
-	g_ConfigDB.CreateValue(CFG_USER, "multiplayerserver")->m_String = CStrW(server).ToUTF8();
-	g_ConfigDB.WriteFile(CFG_USER);
-}
-
 void StartNetworkGame(void* UNUSED(cbdata))
 {
 	ENSURE(g_NetServer);
@@ -510,21 +496,6 @@ bool IsUserReportEnabled(void* UNUSED(cbdata))
 	return g_UserReporter.IsReportingEnabled();
 }
 
-bool IsSplashScreenEnabled(void* UNUSED(cbdata))
-{
-	bool splashScreenEnable = true;
-	CFG_GET_VAL("splashscreenenable", Bool, splashScreenEnable);
-	return splashScreenEnable;
-}
-
-void SetSplashScreenEnabled(void* UNUSED(cbdata), bool enabled)
-{
-	CStr val = (enabled ? "true" : "false");
-	g_ConfigDB.CreateValue(CFG_USER, "splashscreenenable")->m_String = val;
-	g_ConfigDB.WriteFile(CFG_USER);
-}
-
-
 void SetUserReportEnabled(void* UNUSED(cbdata), bool enabled)
 {
 	g_UserReporter.SetReportingEnabled(enabled);
@@ -734,27 +705,6 @@ void LobbySendMessage(void* UNUSED(cbdata), std::string message)
 	g_XmppClient->SendMUCMessage(message);
 }
 
-std::string GetDefaultLobbyPlayerUsername(void* UNUSED(cbdata))
-{
-	std::string username;
-	CFG_GET_VAL("lobby.login", String, username);
-	return username;
-}
-
-std::string GetDefaultLobbyPlayerPassword(void* UNUSED(cbdata))
-{
-	std::string password;
-	CFG_GET_VAL("lobby.password", String, password);
-	return password;
-}
-
-void SetDefaultLobbyPlayerPair(void * UNUSED(cbdata), std::string username, std::string password)
-{
-	g_ConfigDB.CreateValue(CFG_USER, "lobby.login")->m_String = username;
-	g_ConfigDB.CreateValue(CFG_USER, "lobby.password")->m_String = password;
-	g_ConfigDB.WriteFile(CFG_USER);
-}
-
 void LobbySetPlayerPresence(void* UNUSED(cbdata), std::string presence)
 {
 	if(!g_XmppClient)
@@ -825,8 +775,6 @@ void GuiScriptingInit(ScriptInterface& scriptInterface)
 	scriptInterface.RegisterFunction<std::wstring, std::wstring, &SetCursor>("SetCursor");
 	scriptInterface.RegisterFunction<int, &GetPlayerID>("GetPlayerID");
 	scriptInterface.RegisterFunction<std::wstring, &GetDefaultPlayerName>("GetDefaultPlayerName");
-	scriptInterface.RegisterFunction<std::wstring, &GetDefaultMPServer>("GetDefaultMPServer");
-	scriptInterface.RegisterFunction<void, std::wstring, std::wstring, &SaveMPConfig>("SaveMPConfig");
 	scriptInterface.RegisterFunction<void, std::string, &OpenURL>("OpenURL");
 	scriptInterface.RegisterFunction<void, &RestartInAtlas>("RestartInAtlas");
 	scriptInterface.RegisterFunction<bool, &AtlasIsAvailable>("AtlasIsAvailable");
@@ -848,10 +796,6 @@ void GuiScriptingInit(ScriptInterface& scriptInterface)
 	scriptInterface.RegisterFunction<void, bool, &SetUserReportEnabled>("SetUserReportEnabled");
 	scriptInterface.RegisterFunction<std::string, &GetUserReportStatus>("GetUserReportStatus");
 	scriptInterface.RegisterFunction<void, std::string, int, std::wstring, &SubmitUserReport>("SubmitUserReport");
-
-	// Splash screen functions
-	scriptInterface.RegisterFunction<bool, &IsSplashScreenEnabled>("IsSplashScreenEnabled");
-	scriptInterface.RegisterFunction<void, bool, &SetSplashScreenEnabled>("SetSplashScreenEnabled");
 
 	// Development/debugging functions
 	scriptInterface.RegisterFunction<void, float, &SetSimRate>("SetSimRate");
@@ -883,8 +827,5 @@ void GuiScriptingInit(ScriptInterface& scriptInterface)
 	scriptInterface.RegisterFunction<CScriptVal, &GetGameList>("GetGameList");
 	scriptInterface.RegisterFunction<CScriptVal, &LobbyGuiPollMessage>("LobbyGuiPollMessage");
 	scriptInterface.RegisterFunction<void, std::string, &LobbySendMessage>("LobbySendMessage");
-	scriptInterface.RegisterFunction<std::string, &GetDefaultLobbyPlayerUsername>("GetDefaultLobbyPlayerUsername");
-	scriptInterface.RegisterFunction<std::string, &GetDefaultLobbyPlayerPassword>("GetDefaultLobbyPlayerPassword");
-	scriptInterface.RegisterFunction<void, std::string, std::string, &SetDefaultLobbyPlayerPair>("SetDefaultLobbyPlayerPair");
 	scriptInterface.RegisterFunction<void, std::string, &LobbySetPlayerPresence>("LobbySetPlayerPresence");
 }

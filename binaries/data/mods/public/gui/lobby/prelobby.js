@@ -4,8 +4,8 @@ var g_InitialPassword = "";
 
 function init()
 {
-	g_InitialUsername = Engine.GetDefaultLobbyPlayerUsername();
-	g_InitialPassword = Engine.GetDefaultLobbyPlayerPassword();
+	g_InitialUsername = g_ConfigDB.user["lobby.login"];
+	g_InitialPassword = g_ConfigDB.user["lobby.password"];
 }
 
 function lobbyStop()
@@ -105,9 +105,10 @@ function onTick()
 				var username = getGUIObjectByName("connectUsername").caption;
 				var password = getGUIObjectByName("connectPassword").caption;
 				// Store latest player name
-				Engine.SaveMPConfig(sname, Engine.GetDefaultMPServer());
+				g_ConfigDB.user["playername"] = sname;
 				// Store latest username and password
-				Engine.SetDefaultLobbyPlayerPair(username, password);
+				g_ConfigDB.user["lobby.login"] = username;
+				g_ConfigDB.user["lobby.password"] = password;
 
 				return;
 			}

@@ -41,7 +41,7 @@
 
 			<object name="joinServer" type="input" size="210 80 100%-32 104" style="StoneInput">
 				<action on="Load">
-					this.caption = Engine.GetDefaultMPServer();
+					this.caption = g_ConfigDB.user["multiplayerserver"]
 				</action>
 			</object>3 100%-33 103 100%-3
 
@@ -50,7 +50,8 @@
 				<action on="Press">
 					var joinPlayerName = getGUIObjectByName("joinPlayerName").caption;
 					var joinServer = getGUIObjectByName("joinServer").caption;
-					Engine.SaveMPConfig(joinPlayerName, joinServer);
+					g_ConfigDB.user["playername"] = joinPlayerName;
+					g_ConfigDB.user["multiplayerserver"] = joinServer;
 					if (startJoin(joinPlayerName, joinServer))
 					{
 						switchSetupPage("pageJoin", "pageConnecting");
@@ -93,7 +94,7 @@
 				Continue
 				<action on="Press">
 					var hostPlayerName = getGUIObjectByName("hostPlayerName").caption;
-					Engine.SaveMPConfig(hostPlayerName, Engine.GetDefaultMPServer());
+					g_ConfigDB.user["playername"] = hostPlayerName;
 					if (startHost(
 						hostPlayerName,
 						getGUIObjectByName("hostServerName").caption))

@@ -38,7 +38,7 @@ function init(attribs)
 	var spamMonitorTimer = setTimeout(clearSpamMonitor, 5000);
 	var spammerTimer = setTimeout(clearSpammers, 30000);
 
-	g_IRCConfig = g_ConfigDB.system["lobby.ircCommands"];
+	g_IRCConfig = g_ConfigDB.user["lobby.ircCommands"];
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
