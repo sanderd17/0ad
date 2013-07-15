@@ -1,6 +1,7 @@
 var g_ChatMessages = [];
 var g_Name = "unknown Bob";
 var g_GameList = {};
+var g_specialKey = Math.random();
 var g_spamMonitor = {};
 var g_spammers = {};
 var g_IRCConfig = false;
@@ -230,8 +231,8 @@ function playersChanged(playerList)
 	for each (p in playerList){newPlayerNames.push(p.name);}
 	for each (p in newPlayerNames) {var index = oldPlayerNames.indexOf(p);if (index === -1){newPlayers.push(p);}}
 	for each (p in oldPlayerNames) {var index = newPlayerNames.indexOf(p);if (index === -1){oldPlayers.push(p);}}
-	for each (p in newPlayers) {addChatMessage({ "from":"playersChanged", "text": p+" has joined."});}
-	for each (p in oldPlayers) {addChatMessage({ "from":"playersChanged", "text": p+" has left." });}
+	for each (p in newPlayers) {addChatMessage({ "text":"/special " + p + " has joined.", "key":g_specialKey});}
+	for each (p in oldPlayers) {addChatMessage({ "text":"/special " + p + " has left.", "key":g_specialKey});}
 }
 
 function selectGame(selected)
@@ -391,7 +392,7 @@ function onTick()
 							case "gamelist updated":
 								updateGameList();
 								var t = new Date(Date.now());
-								var time = t.getHours()+":"+twoDigits(t.getMinutes())+":"+twoDigits(t.getSeconds());
+								var time = t.getHours() % 12 + ":" + twoDigits(t.getMinutes()) + ":" + twoDigits(t.getSeconds());
 								getGUIObjectByName("updateStatusText").caption = "Updated at " + time;
 								break;
 							case "playerlist updated":
@@ -424,14 +425,17 @@ function addChatMessage(msg)
 	var from = escapeText(msg.from);
 	var text = escapeText(msg.text);
 	var color = msg.color;
+
 	// Run spam test
 	if (updateSpamandDetect(text, from))
 		return;
-	if (from === "playersChanged") // If a join/exit message apply special formatting
-		formatted = '[font="serif-bold-13"]' + text + '[/font] '
-	if (g_IRCConfig === true) // If IRC formatting is enabled, use that.
-		var formatted = ircFormat(text, from, color);
-	else if (!formatted)// Otherwise, format noramlly.
+
+	// Format Text
+	if (g_IRCConfig === "true") // If IRC formatting is enabled, use that.
+		var formatted = ircFormat(text, from, color, msg.key);
+	else if (text.substring(0, 8) === "/special" && msg.key === g_specialKey) // If a join/exit message apply special formatting
+		var formatted = '[font="serif-bold-13"]' + text.substring(8) + '[/font]';
+	else if (!formatted) // Otherwise, format normally.
 		var formatted = '[font="serif-bold-13"]<[color="'+ color +'"]' + from + '[/color]>[/font] ' + text;
 
 	// If there is text, add it to the chat box.
@@ -443,7 +447,7 @@ function addChatMessage(msg)
 }
 
 // The following formats text in an IRC-like way
-function ircFormat(text, from, color)
+function ircFormat(text, from, color, key)
 {
 	function warnUnsupportedCommand(command, from) // Function to warn only local player
 	{
@@ -452,23 +456,43 @@ function ircFormat(text, from, color)
 		return;
 	}
 
+	function ircSplit(string)
+	{
+		var command = string;
+		var message = "";
+		for (var i = 0; i < string.length; ++i)
+		{
+			if (string[i] === " ")
+			{
+				command = string.substring(0, i);
+				message = string.substring(i+1);
+				break;
+			}
+		}
+		return [message, command];
+	}
+
 	// Build time header
 	time = new Date(Date.now());
-	timeHeader = '[font="serif-bold-13"]\x5B' + twoDigits(time.getHours()) + ":" + twoDigits(time.getMinutes()) + '\x5D[/font] '
+	formatted = '[font="serif-bold-13"]\x5B' + twoDigits(time.getHours() % 12) + ":" + twoDigits(time.getMinutes()) + '\x5D[/font] '
 
 	// Handle commands
-	if (text.substring(0, 3) === "/me") // Handle the /me command
-		var formatted = timeHeader + '[font="serif-bold-13"]* [color="' + color + '"]' + from + '[/color][/font] ' + text.substring(3, text.length);
-	else if (text.substring(0, 5) === "/nick") // TODO: Implement ability to change nickname
-		warnUnsupportedCommand("/nick", from);
-	else if (text.substring(0, 4) === "/msg") // TODO: Implement private messaging
-		warnUnsupportedCommand("/msg", from);
-	else if (from === "playersChanged") // Special formatting for join/leave messages.
-		var formatted = timeHeader + '[font="serif-bold-13"]== ' + text + '[/font]';
-	else
-		var formatted = timeHeader + '[font="serif-bold-13"]<[color="' + color + '"]' + from + '[/color]>[/font] ' + text;
-	// Return the formatted text
-	return formatted;
+	if (text.substring(0, 1) === "/")
+	{
+		var [message, command] = ircSplit(text);
+		switch (command)
+		{
+			case "/me":
+				return formatted + '[font="serif-bold-13"]* [color="' + color + '"]' + from + '[/color][/font] ' + message;
+				break;
+			case "/special":
+				if (key === g_specialKey)
+					return formatted + '[font="serif-bold-13"] == ' + message + '[/font]';
+			default:
+				return warnUnsupportedCommand(command, from)
+		}
+	}
+	return formatted + '[font="serif-bold-13"]<[color="' + color + '"]' + from + '[/color]>[/font] ' + text;
 }
 
 // The following function tracks message stats and returns true if the input text is spam.
