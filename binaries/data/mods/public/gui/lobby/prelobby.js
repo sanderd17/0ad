@@ -109,7 +109,8 @@ function onTick()
 				// Store latest username and password
 				g_ConfigDB.user["lobby.login"] = username;
 				g_ConfigDB.user["lobby.password"] = password;
-
+				// Write user config file
+				g_ConfigDB.user.writeFile("config/user.cfg");
 				return;
 			}
 			else if (message.type == "system" && message.text == "registered")

@@ -52,6 +52,7 @@
 					var joinServer = getGUIObjectByName("joinServer").caption;
 					g_ConfigDB.user["playername"] = joinPlayerName;
 					g_ConfigDB.user["multiplayerserver"] = joinServer;
+					g_ConfigDB.user.writeFile("config/user.cfg");
 					if (startJoin(joinPlayerName, joinServer))
 					{
 						switchSetupPage("pageJoin", "pageConnecting");
@@ -95,6 +96,7 @@
 				<action on="Press">
 					var hostPlayerName = getGUIObjectByName("hostPlayerName").caption;
 					g_ConfigDB.user["playername"] = hostPlayerName;
+					g_ConfigDB.user.writeFile("config/user.cfg");
 					if (startHost(
 						hostPlayerName,
 						getGUIObjectByName("hostServerName").caption))

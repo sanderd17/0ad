@@ -22,8 +22,9 @@
 		<object name="btnOK" type="button" style="StoneButton" tooltip_style="snToolTip" size="24 100%-52 188 100%-24">
 			OK
 			<action on="Press"><![CDATA[
-			if((getGUIObjectByName("displaySplashScreen").checked)
-				g_ConfigDB.user[""splashscreenenable""] = "true";
+			if(getGUIObjectByName("displaySplashScreen").checked === false)
+				g_ConfigDB.user["splashscreenenable"] = "false";
+				g_ConfigDB.user.writeFile("config/user.cfg");
 			Engine.PopGuiPage();
 			]]></action>
 		</object>
