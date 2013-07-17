@@ -485,6 +485,8 @@ function ircFormat(text, from, color, key)
 			case "/me":
 				return formatted + '[font="serif-bold-13"]* [color="' + color + '"]' + from + '[/color][/font] ' + message;
 				break;
+			case "/say":
+				break;
 			case "/special":
 				if (key === g_specialKey)
 					return formatted + '[font="serif-bold-13"] == ' + message + '[/font]';
