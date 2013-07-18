@@ -185,15 +185,20 @@ void XmppClient::handleMUCParticipantPresence(gloox::MUCRoom*, const gloox::MUCR
   //std::string jid = participant.jid->full();
   std::string nick = participant.nick->resource();
   gloox::Presence::PresenceType presenceType = presence.presence();
+  if (m_PlayerMap.find(nick) == m_PlayerMap.end())
+  {
+    CreateSimpleMessage("system", "playerchange", "internal", "j " + nick);
+  }
   if (presenceType == Presence::Unavailable)
   {
     DbgXMPP(nick << " left the room");
     m_PlayerMap.erase(nick);
+    CreateSimpleMessage("system", "playerchange", "internal", "l " + nick);
   }
   else
   {
     DbgXMPP(nick << " is in the room, presence : " << (int)presenceType);
-    m_PlayerMap[nick] = std::pair<std::string, int>(nick, (int)presenceType);
+    m_PlayerMap[nick] = (int)presenceType;
   }
   CreateSimpleMessage("system", "playerlist updated", "internal");
 }
@@ -467,10 +472,10 @@ CScriptValRooted XmppClient::GUIGetPlayerList()
   std::string presence;
   CScriptValRooted playerList;
   GetScriptInterface().Eval("({})", playerList);
-  for(std::map<std::string, std::pair<std::string, int> >::iterator it = m_PlayerMap.begin(); it != m_PlayerMap.end(); ++it)
+  for(std::map<std::string, int>::iterator it = m_PlayerMap.begin(); it != m_PlayerMap.end(); ++it)
   {
     CScriptValRooted player;
-    switch(it->second.second)
+    switch(it->second)
     {
       case Presence::Available:
         presence = "available";
@@ -480,10 +485,10 @@ CScriptValRooted XmppClient::GUIGetPlayerList()
         break;
     }
     GetScriptInterface().Eval("({})", player);
-    GetScriptInterface().SetProperty(player.get(), "name", it->second.first.c_str());
+    GetScriptInterface().SetProperty(player.get(), "name", it->first.c_str());
     GetScriptInterface().SetProperty(player.get(), "presence", presence.c_str());
 
-    GetScriptInterface().SetProperty(playerList.get(), it->second.first.c_str(), player);
+    GetScriptInterface().SetProperty(playerList.get(), it->first.c_str(), player);
   }
 
   return playerList;
@@ -532,13 +537,14 @@ void XmppClient::PushGuiMessage(const CScriptValRooted& message)
   m_GuiMessageQueue.push_back(message);
 }
 
-void XmppClient::CreateSimpleMessage(std::string type, std::string text, std::string level)
+void XmppClient::CreateSimpleMessage(std::string type, std::string text, std::string level, std::string data)
 {
   CScriptValRooted message;
   GetScriptInterface().Eval("({})", message);
   GetScriptInterface().SetProperty(message.get(), "type", type);
   GetScriptInterface().SetProperty(message.get(), "level", level);
   GetScriptInterface().SetProperty(message.get(), "text", text);
+  GetScriptInterface().SetProperty(message.get(), "data", data);
   PushGuiMessage(message);
 }
 

@@ -164,11 +164,11 @@ public:
   void SendMUCMessage(std::string message);
 protected:
   void PushGuiMessage(const CScriptValRooted& message);
-  void CreateSimpleMessage(std::string type, std::string text, std::string level = "standard");
+  void CreateSimpleMessage(std::string type, std::string text, std::string level = "standard", std::string data = "");
 
 private:
   /// Map of players
-  std::map<std::string, std::pair<std::string, int> > m_PlayerMap;
+  std::map<std::string, int> m_PlayerMap;
   /// List of games
   std::list< GameItemData > m_GameList;
   /// Queue of messages

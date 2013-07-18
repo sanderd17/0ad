@@ -5,7 +5,7 @@ var g_specialKey = Math.random();
 var g_spamMonitor = {};
 var g_spammers = {};
 var g_IRCConfig = false;
-var g_cachedPlayerList = {};
+var g_cachedPlayerList;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 var g_mapSizes = {};
@@ -38,7 +38,7 @@ function init(attribs)
 	var spamMonitorTimer = setTimeout(clearSpamMonitor, 5000);
 	var spammerTimer = setTimeout(clearSpammers, 30000);
 
-	g_IRCConfig = g_ConfigDB.user["lobby.ircCommands"];
+	g_timestampConfig = g_ConfigDB.user["lobby.chattimestamp"];
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -215,24 +215,15 @@ function updatePlayerList()
 	playersBox.list = list_name;
 	if (playersBox.selected >= playersBox.list.length)
 		playersBox.selected = -1;
-	if (playerList !== g_cachedPlayerList)
-		playersChanged(playerList);	
-	g_cachedPlayerList = playerList
 }
 
 // The following function notifies players when someone quits or joins the lobby.
-function playersChanged(playerList)
+function playerChanged(playerNick, joined)
 {
-	var oldPlayerNames = [];
-	var newPlayerNames = [];
-	var newPlayers = [];
-	var oldPlayers = [];
-	for each (p in g_cachedPlayerList){oldPlayerNames.push(p.name);}
-	for each (p in playerList){newPlayerNames.push(p.name);}
-	for each (p in newPlayerNames) {var index = oldPlayerNames.indexOf(p);if (index === -1){newPlayers.push(p);}}
-	for each (p in oldPlayerNames) {var index = newPlayerNames.indexOf(p);if (index === -1){oldPlayers.push(p);}}
-	for each (p in newPlayers) {addChatMessage({ "text":"/special " + p + " has joined.", "key":g_specialKey});}
-	for each (p in oldPlayers) {addChatMessage({ "text":"/special " + p + " has left.", "key":g_specialKey});}
+	if (joined)
+		addChatMessage({ "text":"/special " + playerNick + " has joined.", "key":g_specialKey});
+	else
+		addChatMessage({ "text":"/special " + playerNick + " has left.", "key":g_specialKey});
 }
 
 function selectGame(selected)
@@ -398,6 +389,9 @@ function onTick()
 							case "playerlist updated":
 								updatePlayerList();
 								break;
+							case "playerchange":
+								playerChanged(message.data.substring(1), message.data.substring(0, 1) === "j" ? true : false)
+								break;
 						}
 						break
 				}
@@ -431,12 +425,7 @@ function addChatMessage(msg)
 		return;
 
 	// Format Text
-	if (g_IRCConfig === "true") // If IRC formatting is enabled, use that.
-		var formatted = ircFormat(text, from, color, msg.key);
-	else if (text.substring(0, 8) === "/special" && msg.key === g_specialKey) // If a join/exit message apply special formatting
-		var formatted = '[font="serif-bold-13"]' + text.substring(8) + '[/font]';
-	else if (!formatted) // Otherwise, format normally.
-		var formatted = '[font="serif-bold-13"]<[color="'+ color +'"]' + from + '[/color]>[/font] ' + text;
+	var formatted = ircFormat(text, from, color, msg.key);
 
 	// If there is text, add it to the chat box.
 	if (formatted)
@@ -449,6 +438,7 @@ function addChatMessage(msg)
 // The following formats text in an IRC-like way
 function ircFormat(text, from, color, key)
 {
+	time = new Date(Date.now());
 	function warnUnsupportedCommand(command, from) // Function to warn only local player
 	{
 		if (from === Engine.GetDefaultPlayerName())
@@ -472,9 +462,11 @@ function ircFormat(text, from, color, key)
 		return [message, command];
 	}
 
-	// Build time header
-	time = new Date(Date.now());
-	formatted = '[font="serif-bold-13"]\x5B' + twoDigits(time.getHours() % 12) + ":" + twoDigits(time.getMinutes()) + '\x5D[/font] '
+	// Build time header if enabled
+	if (g_timestampConfig === "true")
+		formatted = '[font="serif-bold-13"]\x5B' + twoDigits(time.getHours() % 12) + ":" + twoDigits(time.getMinutes()) + '\x5D[/font] '
+	else
+		formatted = "";
 
 	// Handle commands
 	if (text.substring(0, 1) === "/")
@@ -486,6 +478,7 @@ function ircFormat(text, from, color, key)
 				return formatted + '[font="serif-bold-13"]* [color="' + color + '"]' + from + '[/color][/font] ' + message;
 				break;
 			case "/say":
+				return formatted + '[font="serif-bold-13"]<[color="' + color + '"]' + from + '[/color]>[/font] ' + message;
 				break;
 			case "/special":
 				if (key === g_specialKey)
