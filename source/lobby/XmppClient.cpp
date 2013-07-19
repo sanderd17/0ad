@@ -30,6 +30,8 @@
 //Game - script
 #include "scriptinterface/ScriptInterface.h"
 
+#include "ps/CLogger.h"
+
 //Configuration
 #include "ps/ConfigDB.h"
 
@@ -181,7 +183,7 @@ void XmppClient::recv()
  *  MUC Handlers
  */
 void XmppClient::handleMUCParticipantPresence(gloox::MUCRoom*, const gloox::MUCRoomParticipant participant, const gloox::Presence& presence)
-{  
+{
   //std::string jid = participant.jid->full();
   std::string nick = participant.nick->resource();
   gloox::Presence::PresenceType presenceType = presence.presence();
@@ -553,7 +555,7 @@ void XmppClient::SetPresence(std::string presence)
   else if (presence == "playing")
     _mucRoom->setPresence(Presence::DND);
   else if (presence == "away")
-    _mucRoom->setPresene(Presence::Away);
+    _mucRoom->setPresence(Presence::Away);
   else
     LOGERROR(L"Unknown presence '%hs'", presence.c_str());
 }

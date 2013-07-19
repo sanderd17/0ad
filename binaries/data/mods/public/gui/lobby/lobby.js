@@ -6,6 +6,7 @@ var g_spamMonitor = {};
 var g_spammers = {};
 var g_IRCConfig = false;
 var g_cachedPlayerList;
+var g_timestamp = g_ConfigDB.user["lobby.chattimestamp"] == "true";
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 var g_mapSizes = {};
@@ -37,8 +38,6 @@ function init(attribs)
 	resetFilters();
 	var spamMonitorTimer = setTimeout(clearSpamMonitor, 5000);
 	var spammerTimer = setTimeout(clearSpammers, 30000);
-
-	g_timestampConfig = g_ConfigDB.user["lobby.chattimestamp"] == "true";
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -190,21 +189,32 @@ function updatePlayerList()
 	for each (p in playerList)
 	{
 		// Set colors based on player status
-		if (p.presence == "playing")
+		var color_close = '[/color]'; 
+		switch (p.presence)
 		{
-			var name = '[color="125 0 0"]' + p.name + '[/color]';
-			var status = '[color="125 0 0"]Busy[/color]';
+		case "playing":
+			var color = '[color="125 0 0"]';
+			var status = color + "Busy" + color_close;
+			break;
+		case "away":
+			var color = '[color="0 0 125"]';
+			var status = color + "Away" + color_close;
+			break;
+		case "available":
+			var color = '[color="0 125 0"]';
+			var status = color + "Online" + color_close;
+			break;
+		default:
+			warn("Unknown presence '"+p.presence+"'");
+			break;
 		}
-		else
-		{
-			var name = '[color="0 125 0"]' + p.name + '[/color]';
-			var status = '[color="0 125 0"]Online[/color]';
-		}
+
 		// Highlight the local player's nickname
 		if (p.name == nickname)
-		{
-			var name = '[color="orange"]' + p.name + '[/color]';
-		}
+			color = '[color="orange"]';
+
+		var name = color + p.name + color_close;
+
 		// Push this player's name and status onto the list
 		list_name.push(name);
 		list_status.push(status);
@@ -345,7 +355,6 @@ function onTick()
 	// Wake up XmppClient
 	Engine.RecvXmppClient();
 
-	// Update Timers
 	updateTimers();
 
 	// Receive messages
@@ -414,9 +423,38 @@ function submitChatInput()
 	var text = input.caption;
 	if (text.length)
 	{
-		Engine.LobbySendMessage(text);
+		if (!handleSpecialCommand(text))
+			Engine.LobbySendMessage(text);
 		input.caption = "";
 	}
+}
+
+function handleSpecialCommand(text)
+{
+	if (text[0] != '/')
+		return false;
+
+	var [cmd, msg] = ircSplit(text);
+
+	switch (cmd)
+	{
+	case "away":
+		// TODO: Should we handle away messages?
+		Engine.LobbySetPlayerPresence("away");
+		break;
+	case "back":
+		Engine.LobbySetPlayerPresence("available");
+		break;
+	case "kick": // TODO
+		warn("/kick not yet implemented");
+		break;
+	case "ban": // TODO
+		warn("/ban not yet implemented");
+		break;
+	default:
+		return false;
+	}
+	return true;
 }
 
 function addChatMessage(msg)
@@ -440,6 +478,14 @@ function addChatMessage(msg)
 	}
 }
 
+function ircSplit(string)
+{
+	var idx = string.indexOf(' ');
+	if (idx != -1)
+		return [string.substr(1,idx-1), string.substr(idx+1)];
+	return [string.substr(1)];
+}
+
 // The following formats text in an IRC-like way
 function ircFormat(text, from, color, key)
 {
@@ -447,28 +493,12 @@ function ircFormat(text, from, color, key)
 	function warnUnsupportedCommand(command, from) // Function to warn only local player
 	{
 		if (from === Engine.GetDefaultPlayerName())
-			addChatMessage({ "from": "system", "text": "We're sorry, the " + command + " command is not supported.", "color": "255 0 0" });
+			addChatMessage({ "from": "system", "text": "We're sorry, the '" + command + "' command is not supported.", "color": "255 0 0" });
 		return;
 	}
 
-	function ircSplit(string)
-	{
-		var command = string;
-		var message = "";
-		for (var i = 0; i < string.length; ++i)
-		{
-			if (string[i] === " ")
-			{
-				command = string.substring(0, i);
-				message = string.substring(i+1);
-				break;
-			}
-		}
-		return [message, command];
-	}
-
 	// Build time header if enabled
-	if (g_timestampConfig)
+	if (g_timestamp)
 		formatted = '[font="serif-bold-13"]\x5B' + twoDigits(time.getHours() % 12) + ":" + twoDigits(time.getMinutes()) + '\x5D[/font] '
 	else
 		formatted = "";
@@ -479,17 +509,11 @@ function ircFormat(text, from, color, key)
 		var [message, command] = ircSplit(text);
 		switch (command)
 		{
-			case "/me":
+			case "me":
 				return formatted + '[font="serif-bold-13"]* [color="' + color + '"]' + from + '[/color][/font] ' + message;
-			case "/say":
+			case "say":
 				return formatted + '[font="serif-bold-13"]<[color="' + color + '"]' + from + '[/color]>[/font] ' + message;
-			case "/away":
-				Engine.LobbySetPlayerPresence("away");
-				return ""; // TODO: Actually we want to ignore this, and not even send it to other players
-			case "/back":
-				Engine.LobbySetPlayerPresence("available");
-				return ""; // TODO: We do not want to send this empty message to other players, so it'd be best to handle this before sending it and not send it at all
-			case "/special":
+			case "special":
 				if (key === g_specialKey)
 					return formatted + '[font="serif-bold-13"] == ' + message + '[/font]';
 				break;
