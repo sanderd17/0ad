@@ -5,7 +5,6 @@ var g_specialKey = Math.random();
 var g_spamMonitor = {};
 var g_spammers = {};
 var g_IRCConfig = false;
-var g_cachedPlayerList;
 var g_timestamp = g_ConfigDB.user["lobby.chattimestamp"] == "true";
 
 ////////////////////////////////////////////////////////////////////////////////////////////////

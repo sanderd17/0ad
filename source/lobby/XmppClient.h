@@ -120,6 +120,7 @@ public:
 	void SetNick(std::string& nick);
 	void kick(std::string& nick, std::string& reason);
 	void ban(std::string& nick, std::string& reason);
+	std::string GetPresence(std::string& nickname);
 
   CScriptValRooted GUIGetPlayerList();
   CScriptValRooted GUIGetGameList();
