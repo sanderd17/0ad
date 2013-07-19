@@ -185,10 +185,6 @@ void XmppClient::handleMUCParticipantPresence(gloox::MUCRoom*, const gloox::MUCR
   //std::string jid = participant.jid->full();
   std::string nick = participant.nick->resource();
   gloox::Presence::PresenceType presenceType = presence.presence();
-  if (m_PlayerMap.find(nick) == m_PlayerMap.end())
-  {
-    CreateSimpleMessage("system", "playerchange", "internal", "j " + nick);
-  }
   if (presenceType == Presence::Unavailable)
   {
     DbgXMPP(nick << " left the room");
@@ -197,8 +193,10 @@ void XmppClient::handleMUCParticipantPresence(gloox::MUCRoom*, const gloox::MUCR
   }
   else
   {
+    if (m_PlayerMap.find(nick) == m_PlayerMap.end())
+      CreateSimpleMessage("system", "playerchange", "internal", "j " + nick);
     DbgXMPP(nick << " is in the room, presence : " << (int)presenceType);
-    m_PlayerMap[nick] = (int)presenceType;
+    m_PlayerMap[nick] = presenceType;
   }
   CreateSimpleMessage("system", "playerlist updated", "internal");
 }
@@ -454,13 +452,10 @@ void XmppClient::handleMessage( const Message& msg, MessageSession * /*session*/
   DbgXMPP("type " << msg.subtype() << ", subject " << msg.subject().c_str() 
     << ", message " << msg.body().c_str() << ", thread id " << msg.thread().c_str());
 
-  std::string nick = msg.from().resource();
-  std::string body = msg.body();
-
   CScriptValRooted message;
   GetScriptInterface().Eval("({ 'type':'message'})", message);
-  GetScriptInterface().SetProperty(message.get(), "from", nick);
-  GetScriptInterface().SetProperty(message.get(), "text", body);
+  GetScriptInterface().SetProperty(message.get(), "from", msg.from().resource());
+  GetScriptInterface().SetProperty(message.get(), "text", msg.body());
   PushGuiMessage(message);
 }
 
@@ -472,7 +467,7 @@ CScriptValRooted XmppClient::GUIGetPlayerList()
   std::string presence;
   CScriptValRooted playerList;
   GetScriptInterface().Eval("({})", playerList);
-  for(std::map<std::string, int>::iterator it = m_PlayerMap.begin(); it != m_PlayerMap.end(); ++it)
+  for(std::map<std::string, Presence::PresenceType>::const_iterator it = m_PlayerMap.begin(); it != m_PlayerMap.end(); ++it)
   {
     CScriptValRooted player;
     switch(it->second)
@@ -482,6 +477,9 @@ CScriptValRooted XmppClient::GUIGetPlayerList()
         break;
       case Presence::DND:
         presence = "playing";
+        break;
+      case Presence::Away:
+        presence = "away";
         break;
     }
     GetScriptInterface().Eval("({})", player);
@@ -498,7 +496,7 @@ CScriptValRooted XmppClient::GUIGetGameList()
 {
   CScriptValRooted gameList;
   GetScriptInterface().Eval("([])", gameList);
-  for(std::list<GameItemData>::iterator it = m_GameList.begin(); it !=m_GameList.end(); ++it)
+  for(std::list<GameItemData>::const_iterator it = m_GameList.begin(); it !=m_GameList.end(); ++it)
   {
     CScriptValRooted game;
     GetScriptInterface().Eval("({})", game);
@@ -550,14 +548,14 @@ void XmppClient::CreateSimpleMessage(std::string type, std::string text, std::st
 
 void XmppClient::SetPresence(std::string presence)
 {
-  if(presence.compare("available") == 0)
-  {
+  if (presence == "available")
     _mucRoom->setPresence(Presence::Available);
-  }
-  else if(presence.compare("playing") == 0) 
-  {
+  else if (presence == "playing")
     _mucRoom->setPresence(Presence::DND);
-  }
+  else if (presence == "away")
+    _mucRoom->setPresene(Presence::Away);
+  else
+    LOGERROR(L"Unknown presence '%hs'", presence.c_str());
 }
 
 /*

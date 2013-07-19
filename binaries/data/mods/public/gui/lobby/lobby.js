@@ -38,7 +38,7 @@ function init(attribs)
 	var spamMonitorTimer = setTimeout(clearSpamMonitor, 5000);
 	var spammerTimer = setTimeout(clearSpammers, 30000);
 
-	g_timestampConfig = g_ConfigDB.user["lobby.chattimestamp"];
+	g_timestampConfig = g_ConfigDB.user["lobby.chattimestamp"] == "true";
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -178,6 +178,7 @@ function updateGameList()
 		selectGame(getGUIObjectByName("gamesBox").selected)
 }
 
+// TODO: Handle all of that in playerChanged (possibly rename to playerPresenceChanged)?
 function updatePlayerList()
 {
 	var nickname = Engine.GetDefaultPlayerName();
@@ -204,7 +205,7 @@ function updatePlayerList()
 		{
 			var name = '[color="orange"]' + p.name + '[/color]';
 		}
-		// Push this player's name and staus onto the list
+		// Push this player's name and status onto the list
 		list_name.push(name);
 		list_status.push(status);
 	}
@@ -252,6 +253,7 @@ function selectGame(selected)
 	var mapFiles = getXMLFileList("maps/scenarios/");
 	for (var i = 0; i < mapFiles.length; ++i)
 	{
+		// TODO: Use VFS function to check if the file is present (also see below)
 		var file = mapFiles[i];
 		if(name == file)
 		{
@@ -263,6 +265,7 @@ function selectGame(selected)
 	// Search for the selected map in the random maps
 	if(!mapData)
 	{
+		// TODO: Why not check if we have the file and try to load it? (There surely is a VFS function exposed to allow us to check that)
 		var mapFiles = getJSONFileList("maps/random/");
 		for (var i = 0; i < mapFiles.length; ++i)
 		{
@@ -270,14 +273,13 @@ function selectGame(selected)
 			if(name == file)
 			{
 				mapData = parseJSONData("maps/random/"+file+".json");
+				break;
 			}
 		}
 	}
 
 	if(!mapData)
-	{
 		log("Map '"+ name +"'  not found");
-	}
 
 	// Load the description from the map file, if there is one, and display it
 	var mapSettings = (mapData && mapData.settings ? deepcopy(mapData.settings) : {});
@@ -304,12 +306,13 @@ function joinSelectedGame()
 		var g = gamesBox.list_data[gamesBox.selected];
 		var sname = g_Name;
 		var sip = g_GameList[g].ip;
-		
+
+		// TODO: What about valid host names?
 		// Check if it looks like an ip address
 		if (sip.split('.').length != 4) 
 		{
 			addChatMessage({ "from": "system", "text": "This game does not have a valid address", "color": "255 0 0" });
-			return
+			return;
 		}
 
 		// Open Multiplayer connection window with join option.
@@ -386,6 +389,8 @@ function onTick()
 								var time = t.getHours() % 12 + ":" + twoDigits(t.getMinutes()) + ":" + twoDigits(t.getSeconds());
 								getGUIObjectByName("updateStatusText").caption = "Updated at " + time;
 								break;
+							// Why not move these two to some message.type of "mucplayer"?
+							// That could also handle stuff like nickchanges and that
 							case "playerlist updated":
 								updatePlayerList();
 								break;
@@ -463,26 +468,31 @@ function ircFormat(text, from, color, key)
 	}
 
 	// Build time header if enabled
-	if (g_timestampConfig === "true")
+	if (g_timestampConfig)
 		formatted = '[font="serif-bold-13"]\x5B' + twoDigits(time.getHours() % 12) + ":" + twoDigits(time.getMinutes()) + '\x5D[/font] '
 	else
 		formatted = "";
 
 	// Handle commands
-	if (text.substring(0, 1) === "/")
+	if (text[0] == '/')
 	{
 		var [message, command] = ircSplit(text);
 		switch (command)
 		{
 			case "/me":
 				return formatted + '[font="serif-bold-13"]* [color="' + color + '"]' + from + '[/color][/font] ' + message;
-				break;
 			case "/say":
 				return formatted + '[font="serif-bold-13"]<[color="' + color + '"]' + from + '[/color]>[/font] ' + message;
-				break;
+			case "/away":
+				Engine.LobbySetPlayerPresence("away");
+				return ""; // TODO: Actually we want to ignore this, and not even send it to other players
+			case "/back":
+				Engine.LobbySetPlayerPresence("available");
+				return ""; // TODO: We do not want to send this empty message to other players, so it'd be best to handle this before sending it and not send it at all
 			case "/special":
 				if (key === g_specialKey)
 					return formatted + '[font="serif-bold-13"] == ' + message + '[/font]';
+				break;
 			default:
 				return warnUnsupportedCommand(command, from)
 		}

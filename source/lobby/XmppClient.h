@@ -168,7 +168,7 @@ protected:
 
 private:
   /// Map of players
-  std::map<std::string, int> m_PlayerMap;
+  std::map<std::string, gloox::Presence::PresenceType> m_PlayerMap;
   /// List of games
   std::list< GameItemData > m_GameList;
   /// Queue of messages
