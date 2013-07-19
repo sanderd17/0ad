@@ -566,6 +566,16 @@ void XmppClient::SetNick(std::string& nick)
 	_mucRoom->setNick(nick);
 }
 
+void XmppClient::kick(std::string& nick, std::string& reason)
+{
+	_mucRoom->kick(nick, reason);
+}
+
+void XmppClient::ban(std::string& nick, std::string& reason)
+{
+	_mucRoom->ban(nick, reason);
+}
+
 /*
  *  GameListQuery, custom IQ Stanza
  */

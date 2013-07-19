@@ -118,6 +118,8 @@ public:
   void SendIqChangeStateGame(std::string nbp, std::string players);
   void SetPresence(std::string& presence);
 	void SetNick(std::string& nick);
+	void kick(std::string& nick, std::string& reason);
+	void ban(std::string& nick, std::string& reason);
 
   CScriptValRooted GUIGetPlayerList();
   CScriptValRooted GUIGetGameList();
