@@ -433,7 +433,7 @@ function handleSpecialCommand(text)
 	if (text[0] != '/')
 		return false;
 
-	var [cmd, msg] = ircSplit(text);
+	var [cmd, nick] = ircSplit(text);
 
 	switch (cmd)
 	{
@@ -444,11 +444,15 @@ function handleSpecialCommand(text)
 	case "back":
 		Engine.LobbySetPlayerPresence("available");
 		break;
-	case "kick": // TODO
-		warn("/kick not yet implemented");
+	case "nick":
+		Engine.LobbySetNick(nick);
 		break;
-	case "ban": // TODO
-		warn("/ban not yet implemented");
+	case "kick": // TODO: Split reason from nick and pass it too, for now just support "/kick nick"
+			// also allow quoting nicks (and/or prevent users from changing it here, but that doesn't help if the spammer uses a different client)
+		Engine.LobbyKick(nick, "");
+		break;
+	case "ban": // TODO: Split reason from nick and pass it too, for now just support "/ban nick"
+		Engine.LobbyBan(nick, "");
 		break;
 	default:
 		return false;
@@ -482,7 +486,7 @@ function ircSplit(string)
 	var idx = string.indexOf(' ');
 	if (idx != -1)
 		return [string.substr(1,idx-1), string.substr(idx+1)];
-	return [string.substr(1)];
+	return [string.substr(1), ""];
 }
 
 // The following formats text in an IRC-like way

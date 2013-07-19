@@ -548,7 +548,7 @@ void XmppClient::CreateSimpleMessage(std::string type, std::string text, std::st
   PushGuiMessage(message);
 }
 
-void XmppClient::SetPresence(std::string presence)
+void XmppClient::SetPresence(std::string& presence)
 {
   if (presence == "available")
     _mucRoom->setPresence(Presence::Available);
@@ -576,6 +576,22 @@ std::string XmppClient::GetPresence(std::string nickname)
         break;
     }
   return presence;
+}
+
+// Request nick change, real change via mucRoomHandler
+void XmppClient::SetNick(std::string& nick)
+{
+  _mucRoom->setNick(nick);
+}
+
+void XmppClient::kick(std::string& nick, std::string& reason)
+{
+  _mucRoom->kick(nick, reason);
+}
+
+void XmppClient::ban(std::string& nick, std::string& reason)
+{
+  _mucRoom->ban(nick, reason);
 }
 
 /*
