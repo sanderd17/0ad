@@ -5,7 +5,6 @@ var g_specialKey = Math.random();
 var g_spamMonitor = {};
 var g_spammers = {};
 var g_IRCConfig = false;
-var g_cachedPlayerList;
 var g_timestamp = g_ConfigDB.user["lobby.chattimestamp"] == "true";
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -506,7 +505,7 @@ function ircFormat(text, from, color, key)
 	// Handle commands
 	if (text[0] == '/')
 	{
-		var [message, command] = ircSplit(text);
+		var [command, message] = ircSplit(text);
 		switch (command)
 		{
 			case "me":

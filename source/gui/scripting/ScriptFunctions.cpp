@@ -763,6 +763,15 @@ void LobbySetPlayerPresence(void* UNUSED(cbdata), std::string presence)
 	g_XmppClient->SetPresence(presence);
 }
 
+std::string LobbyGetPlayerPresence(void* UNUSED(cbdata), std::string nickname)
+{
+	if(!g_XmppClient)
+		return "";
+
+	std::string presence = g_XmppClient->GetPresence(nickname);
+	return presence;
+}
+
 /* End lobby related functions */
 
 void QuickSave(void* UNUSED(cbdata))
@@ -887,4 +896,5 @@ void GuiScriptingInit(ScriptInterface& scriptInterface)
 	scriptInterface.RegisterFunction<std::string, &GetDefaultLobbyPlayerPassword>("GetDefaultLobbyPlayerPassword");
 	scriptInterface.RegisterFunction<void, std::string, std::string, &SetDefaultLobbyPlayerPair>("SetDefaultLobbyPlayerPair");
 	scriptInterface.RegisterFunction<void, std::string, &LobbySetPlayerPresence>("LobbySetPlayerPresence");
+	scriptInterface.RegisterFunction<std::string, std::string, &LobbyGetPlayerPresence>("LobbyGetPlayerPresence");
 }

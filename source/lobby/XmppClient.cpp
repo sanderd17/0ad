@@ -560,6 +560,24 @@ void XmppClient::SetPresence(std::string presence)
     LOGERROR(L"Unknown presence '%hs'", presence.c_str());
 }
 
+std::string XmppClient::GetPresence(std::string nickname)
+{
+  std::string presence;
+  switch(m_PlayerMap[nickname])
+    {
+      case Presence::Available:
+        presence = "available";
+        break;
+      case Presence::DND:
+        presence = "playing";
+        break;
+      case Presence::Away:
+        presence = "away";
+        break;
+    }
+  return presence;
+}
+
 /*
  *  GameListQuery, custom IQ Stanza
  */
