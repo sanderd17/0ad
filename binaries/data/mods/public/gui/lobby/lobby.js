@@ -445,6 +445,9 @@ function handleSpecialCommand(text)
 	case "back":
 		Engine.LobbySetPlayerPresence("available");
 		break;
+	case "nick":
+		Engine.LobbySetNick(msg);
+		break;
 	case "kick": // TODO
 		warn("/kick not yet implemented");
 		break;

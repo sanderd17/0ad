@@ -663,42 +663,42 @@ void DisconnectXmppClient(void* UNUSED(cbdata))
 
 void RecvXmppClient(void* UNUSED(cbdata))
 {
-	if(!g_XmppClient)
+	if (!g_XmppClient)
 		return;
 	g_XmppClient->recv();
 }
 
 void SendGetGameList(void* UNUSED(cbdata))
 {
-	if(!g_XmppClient)
+	if (!g_XmppClient)
 		return;
 	g_XmppClient->SendIqGetGameList();
 }
 
 void SendRegisterGame(void* UNUSED(cbdata), CScriptVal data)
 {
-	if(!g_XmppClient)
+	if (!g_XmppClient)
 		return;
 	g_XmppClient->SendIqRegisterGame(data);
 }
 
 void SendUnregisterGame(void* UNUSED(cbdata))
 {
-	if(!g_XmppClient)
+	if (!g_XmppClient)
 		return;
 	g_XmppClient->SendIqUnregisterGame();
 }
 
 void SendChangeStateGame(void* UNUSED(cbdata), std::string nbp, std::string players)
 {
-	if(!g_XmppClient)
+	if (!g_XmppClient)
 		return;
 	g_XmppClient->SendIqChangeStateGame(nbp, players);
 }
 
 CScriptVal GetPlayerList(void* UNUSED(cbdata))
 {
-	if(!g_XmppClient)
+	if (!g_XmppClient)
 		return CScriptVal();
 
 	CScriptValRooted playerList = g_XmppClient->GUIGetPlayerList();
@@ -708,7 +708,7 @@ CScriptVal GetPlayerList(void* UNUSED(cbdata))
 
 CScriptVal GetGameList(void* UNUSED(cbdata))
 {
-	if(!g_XmppClient)
+	if (!g_XmppClient)
 		return CScriptVal();
 
 	CScriptValRooted gameList = g_XmppClient->GUIGetGameList();
@@ -718,7 +718,7 @@ CScriptVal GetGameList(void* UNUSED(cbdata))
 
 CScriptVal LobbyGuiPollMessage(void* UNUSED(cbdata))
 {
-	if(!g_XmppClient)
+	if (!g_XmppClient)
 		return CScriptVal();
 
 	CScriptValRooted poll = g_XmppClient->GuiPollMessage();
@@ -728,7 +728,7 @@ CScriptVal LobbyGuiPollMessage(void* UNUSED(cbdata))
 
 void LobbySendMessage(void* UNUSED(cbdata), std::string message)
 {
-	if(!g_XmppClient)
+	if (!g_XmppClient)
 		return;
 
 	g_XmppClient->SendMUCMessage(message);
@@ -757,10 +757,18 @@ void SetDefaultLobbyPlayerPair(void * UNUSED(cbdata), std::string username, std:
 
 void LobbySetPlayerPresence(void* UNUSED(cbdata), std::string presence)
 {
-	if(!g_XmppClient)
+	if (!g_XmppClient)
 		return;
 
 	g_XmppClient->SetPresence(presence);
+}
+
+void LobbySetNick(void* UNUSED(cbdata), std::string nick)
+{
+	if (!g_XmppClient)
+		return;
+
+	g_XmppClient->SetNick(nick);
 }
 
 /* End lobby related functions */
@@ -887,4 +895,5 @@ void GuiScriptingInit(ScriptInterface& scriptInterface)
 	scriptInterface.RegisterFunction<std::string, &GetDefaultLobbyPlayerPassword>("GetDefaultLobbyPlayerPassword");
 	scriptInterface.RegisterFunction<void, std::string, std::string, &SetDefaultLobbyPlayerPair>("SetDefaultLobbyPlayerPair");
 	scriptInterface.RegisterFunction<void, std::string, &LobbySetPlayerPresence>("LobbySetPlayerPresence");
+	scriptInterface.RegisterFunction<void, std::string, &LobbySetNick>("LobbySetNick");
 }
