@@ -763,15 +763,6 @@ void LobbySetPlayerPresence(void* UNUSED(cbdata), std::string presence)
 	g_XmppClient->SetPresence(presence);
 }
 
-std::string LobbyGetPlayerPresence(void* UNUSED(cbdata), std::string nickname)
-{
-	if(!g_XmppClient)
-		return "";
-
-	std::string presence = g_XmppClient->GetPresence(nickname);
-	return presence;
-}
-
 void LobbySetNick(void* UNUSED(cbdata), std::string nick)
 {
 	if (!g_XmppClient)
@@ -794,6 +785,16 @@ void LobbyBan(void* UNUSED(cbdata), std::string nick, std::string reason)
 		return;
 
 	g_XmppClient->ban(nick, reason);
+}
+
+std::string LobbyGetPlayerPresence(void* UNUSED(cbdata), std::string nickname)
+{
+	if (!g_XmppClient)
+		return "";
+
+	std::string presence;
+	g_XmppClient->GetPresence(nickname, presence);
+	return presence;
 }
 
 /* End lobby related functions */
@@ -920,8 +921,8 @@ void GuiScriptingInit(ScriptInterface& scriptInterface)
 	scriptInterface.RegisterFunction<std::string, &GetDefaultLobbyPlayerPassword>("GetDefaultLobbyPlayerPassword");
 	scriptInterface.RegisterFunction<void, std::string, std::string, &SetDefaultLobbyPlayerPair>("SetDefaultLobbyPlayerPair");
 	scriptInterface.RegisterFunction<void, std::string, &LobbySetPlayerPresence>("LobbySetPlayerPresence");
-	scriptInterface.RegisterFunction<std::string, std::string, &LobbyGetPlayerPresence>("LobbyGetPlayerPresence");
 	scriptInterface.RegisterFunction<void, std::string, &LobbySetNick>("LobbySetNick");
 	scriptInterface.RegisterFunction<void, std::string, std::string, &LobbyKick>("LobbyKick");
 	scriptInterface.RegisterFunction<void, std::string, std::string, &LobbyBan>("LobbyBan");
+	scriptInterface.RegisterFunction<std::string, std::string, &LobbyGetPlayerPresence>("LobbyGetPlayerPresence");
 }
