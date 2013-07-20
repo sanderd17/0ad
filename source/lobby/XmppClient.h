@@ -116,11 +116,11 @@ public:
 	void SendIqRegisterGame(CScriptVal data);
 	void SendIqUnregisterGame();
 	void SendIqChangeStateGame(std::string nbp, std::string players);
-	void SetPresence(std::string& presence);
-	void SetNick(std::string& nick);
-	void kick(std::string& nick, std::string& reason);
-	void ban(std::string& nick, std::string& reason);
-	std::string GetPresence(std::string& nickname);
+	void SetPresence(const std::string& presence);
+	void SetNick(const std::string& nick);
+	void kick(const std::string& nick, const std::string& reason);
+	void ban(const std::string& nick, const std::string& reason);
+	void GetPresence(const std::string& nickname, std::string& presence);
 
 	CScriptValRooted GUIGetPlayerList();
 	CScriptValRooted GUIGetGameList();
@@ -162,8 +162,10 @@ protected:
 	/* Message Handler */
 	virtual void handleMessage(const gloox::Message& msg, gloox::MessageSession * session);
 
-	/* Messages */
+	// Helper
+	void GetPresenceString(const gloox::Presence::PresenceType p, std::string& presence) const;
 public:
+	/* Messages */
 	CScriptValRooted GuiPollMessage();
 	void SendMUCMessage(std::string message);
 	protected:

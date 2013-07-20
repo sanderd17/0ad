@@ -792,7 +792,8 @@ std::string LobbyGetPlayerPresence(void* UNUSED(cbdata), std::string nickname)
 	if (!g_XmppClient)
 		return "";
 
-	std::string presence = g_XmppClient->GetPresence(nickname);
+	std::string presence;
+	g_XmppClient->GetPresence(nickname, presence);
 	return presence;
 }
 

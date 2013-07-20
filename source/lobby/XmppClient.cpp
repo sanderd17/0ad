@@ -58,33 +58,33 @@ const std::string gloox::EmptyString = "";
 std::string StanzaErrorToString(StanzaError& err)
 {
 	std::string msg;
-#define CASE(X, Y) case X: return Y;
+#define CASE(X, Y) case X: return Y
 	switch (err)
 	{
-	CASE(StanzaErrorBadRequest, "Bad request")
-	CASE(StanzaErrorConflict, "Player name already in use")
-	CASE(StanzaErrorFeatureNotImplemented, "Feature not implemented")
-	CASE(StanzaErrorForbidden, "Forbidden")
-	CASE(StanzaErrorGone, "Recipient or server gone")
-	CASE(StanzaErrorInternalServerError, "Internal server error")
-	CASE(StanzaErrorItemNotFound, "Item not found")
-	CASE(StanzaErrorJidMalformed, "Jid malformed")
-	CASE(StanzaErrorNotAcceptable, "Not acceptable")
-	CASE(StanzaErrorNotAllowed, "Not allowed")
-	CASE(StanzaErrorNotAuthorized, "Not authorized")
-	CASE(StanzaErrorNotModified, "Not modified")
-	CASE(StanzaErrorPaymentRequired, "Payment required")
-	CASE(StanzaErrorRecipientUnavailable, "Recipient unavailable")
-	CASE(StanzaErrorRedirect, "Redirect")
-	CASE(StanzaErrorRegistrationRequired, "Registration required")
-	CASE(StanzaErrorRemoteServerNotFound, "Remote server not found")
-	CASE(StanzaErrorRemoteServerTimeout, "Remote server timeout")
-	CASE(StanzaErrorResourceConstraint, "Resource constraint")
-	CASE(StanzaErrorServiceUnavailable, "Service unavailable")
-	CASE(StanzaErrorSubscribtionRequired, "Subscribtion Required")
-	CASE(StanzaErrorUndefinedCondition, "Undefined condition")
-	CASE(StanzaErrorUnexpectedRequest, "Unexpected request")
-	CASE(StanzaErrorUnknownSender, "Unknown sender") 
+	CASE(StanzaErrorBadRequest, "Bad request");
+	CASE(StanzaErrorConflict, "Player name already in use");
+	CASE(StanzaErrorFeatureNotImplemented, "Feature not implemented");
+	CASE(StanzaErrorForbidden, "Forbidden");
+	CASE(StanzaErrorGone, "Recipient or server gone");
+	CASE(StanzaErrorInternalServerError, "Internal server error");
+	CASE(StanzaErrorItemNotFound, "Item not found");
+	CASE(StanzaErrorJidMalformed, "Jid malformed");
+	CASE(StanzaErrorNotAcceptable, "Not acceptable");
+	CASE(StanzaErrorNotAllowed, "Not allowed");
+	CASE(StanzaErrorNotAuthorized, "Not authorized");
+	CASE(StanzaErrorNotModified, "Not modified");
+	CASE(StanzaErrorPaymentRequired, "Payment required");
+	CASE(StanzaErrorRecipientUnavailable, "Recipient unavailable");
+	CASE(StanzaErrorRedirect, "Redirect");
+	CASE(StanzaErrorRegistrationRequired, "Registration required");
+	CASE(StanzaErrorRemoteServerNotFound, "Remote server not found");
+	CASE(StanzaErrorRemoteServerTimeout, "Remote server timeout");
+	CASE(StanzaErrorResourceConstraint, "Resource constraint");
+	CASE(StanzaErrorServiceUnavailable, "Service unavailable");
+	CASE(StanzaErrorSubscribtionRequired, "Subscribtion Required");
+	CASE(StanzaErrorUndefinedCondition, "Undefined condition");
+	CASE(StanzaErrorUnexpectedRequest, "Unexpected request");
+	CASE(StanzaErrorUnknownSender, "Unknown sender");
 	default:
 		return "Error undefined";
 	}
@@ -410,17 +410,17 @@ void XmppClient::handleRegistrationResult( const JID& /*from*/, RegistrationResu
 	else
 	{
 	std::string msg;
-#define CASE(X, Y) case X: msg = Y; break;
+#define CASE(X, Y) case X: msg = Y; break
 		switch(result)
 		{
-		CASE(RegistrationNotAcceptable, "Registration not acceptable")
-		CASE(RegistrationConflict, "Registration conflict")
-		CASE(RegistrationNotAuthorized, "Registration not authorized")
-		CASE(RegistrationBadRequest, "Registration bad request")
-		CASE(RegistrationForbidden, "Registration forbidden")
-		CASE(RegistrationRequired, "Registration required")
-		CASE(RegistrationUnexpectedRequest, "Registration unexpected request")
-		CASE(RegistrationNotAllowed, "Registration not allowed")
+		CASE(RegistrationNotAcceptable, "Registration not acceptable");
+		CASE(RegistrationConflict, "Registration conflict");
+		CASE(RegistrationNotAuthorized, "Registration not authorized");
+		CASE(RegistrationBadRequest, "Registration bad request");
+		CASE(RegistrationForbidden, "Registration forbidden");
+		CASE(RegistrationRequired, "Registration required");
+		CASE(RegistrationUnexpectedRequest, "Registration unexpected request");
+		CASE(RegistrationNotAllowed, "Registration not allowed");
 		default: msg = "Registration unknown error";
 		}
 #undef CASE
@@ -470,18 +470,7 @@ CScriptValRooted XmppClient::GUIGetPlayerList()
 	for(std::map<std::string, Presence::PresenceType>::const_iterator it = m_PlayerMap.begin(); it != m_PlayerMap.end(); ++it)
 	{
 		CScriptValRooted player;
-		switch(it->second)
-		{
-		case Presence::Available:
-			presence = "available";
-			break;
-		case Presence::DND:
-			presence = "playing";
-			break;
-		case Presence::Away:
-			presence = "away";
-			break;
-		}
+		GetPresenceString(it->second, presence);
 		GetScriptInterface().Eval("({})", player);
 		GetScriptInterface().SetProperty(player.get(), "name", it->first.c_str());
 		GetScriptInterface().SetProperty(player.get(), "presence", presence.c_str());
@@ -546,7 +535,7 @@ void XmppClient::CreateSimpleMessage(std::string type, std::string text, std::st
 	PushGuiMessage(message);
 }
 
-void XmppClient::SetPresence(std::string& presence)
+void XmppClient::SetPresence(const std::string& presence)
 {
 	if (presence == "available")
 		_mucRoom->setPresence(Presence::Available);
@@ -559,37 +548,45 @@ void XmppClient::SetPresence(std::string& presence)
 }
 
 // Request nick change, real change via mucRoomHandler
-void XmppClient::SetNick(std::string& nick)
+void XmppClient::SetNick(const std::string& nick)
 {
 	_mucRoom->setNick(nick);
 }
 
-void XmppClient::kick(std::string& nick, std::string& reason)
+void XmppClient::kick(const std::string& nick, const std::string& reason)
 {
 	_mucRoom->kick(nick, reason);
 }
 
-void XmppClient::ban(std::string& nick, std::string& reason)
+void XmppClient::ban(const std::string& nick, const std::string& reason)
 {
 	_mucRoom->ban(nick, reason);
 }
 
-std::string XmppClient::GetPresence(std::string& nickname)
+void XmppClient::GetPresence(const std::string& nick, std::string& presence)
 {
-	std::string presence;
-	switch(m_PlayerMap[nickname])
+	GetPresenceString(m_PlayerMap[nick], presence);
+}
+
+void XmppClient::GetPresenceString(const Presence::PresenceType p, std::string& presence) const
+{
+	switch(p)
 	{
-	case Presence::Available:
-		presence = "available";
+#define CASE(x,y) case Presence::x: presence = y; break
+	CASE(Available, "available");
+	CASE(Chat, "chat");
+	CASE(Away, "away");
+	CASE(DND, "playing");
+	CASE(XA, "gone");
+	CASE(Unavailable, "offline");
+	CASE(Probe, "probe");
+	CASE(Error, "error");
+	CASE(Invalid, "invalid");
+	default:
+		LOGERROR(L"Unknown presence type '%d'", (int)p);
 		break;
-	case Presence::DND:
-		presence = "playing";
-		break;
-	case Presence::Away:
-		presence = "away";
-		break;
+#undef CASE
 	}
-	return presence;
 }
 
 /*
