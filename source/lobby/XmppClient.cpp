@@ -191,17 +191,16 @@ void XmppClient::handleMUCParticipantPresence(gloox::MUCRoom*, const gloox::MUCR
 	{
 		DbgXMPP(nick << " left the room");
 		m_PlayerMap.erase(nick);
-		//CreateSimpleMessage("system", "playerchange", "internal", "l " + nick);
+		CreateSimpleMessage("system", "playerchange", "internal", "l " + nick);
 	}
 	else
 	{
-		//if (m_PlayerMap.find(nick) == m_PlayerMap.end())
-			//CreateSimpleMessage("system", "playerchange", "internal", "j " + nick);
+		if (m_PlayerMap.find(nick) == m_PlayerMap.end())
+			CreateSimpleMessage("system", "playerchange", "internal", "j " + nick);
 		DbgXMPP(nick << " is in the room, presence : " << (int)presenceType);
 		m_PlayerMap[nick] = presenceType;
 	}
 	CreateSimpleMessage("system", "player updated", "internal", nick);
-	//CreateSimpleMessage("system", "playerlist updated", "internal");
 }
 
 void XmppClient::handleMUCMessage( MUCRoom*, const Message& msg, bool )
@@ -568,7 +567,10 @@ void XmppClient::SetPresence(const std::string& presence)
 
 void XmppClient::GetPresence(const std::string& nick, std::string& presence)
 {
-	GetPresenceString(m_PlayerMap[nick], presence);
+	if (m_PlayerMap.find(nick) != m_PlayerMap.end())
+		GetPresenceString(m_PlayerMap[nick], presence);
+	else
+		presence = "offline";
 }
 
 void XmppClient::GetPresenceString(const Presence::PresenceType p, std::string& presence) const

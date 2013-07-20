@@ -176,7 +176,6 @@ function updateGameList()
 		selectGame(getGUIObjectByName("gamesBox").selected)
 }
 
-// TODO: Handle all of that in playerChanged (possibly rename to playerPresenceChanged)?
 function updatePlayers(nick)
 {
 	var presence = Engine.LobbyGetPlayerPresence(nick);
@@ -185,9 +184,10 @@ function updatePlayers(nick)
 	var presenceList = playersBox.list_status;
 	var nickList = playersBox.list;
 	var nickIndex = nickList.indexOf(nick);
-	warn("Nick: "+nick+", is in lobby, presence: "+presence);
+	//warn("Nick: "+nick+", is in lobby, presence: "+presence);
 	if (nickIndex != -1 && presence == "offline")
 	{
+		// If nick left, notify player and remove nick from GUI
 		playerList.splice(nickIndex, 1);
 		presenceList.splice(nickIndex, 1);
 		nickList.splice(nickIndex, 1);
@@ -195,19 +195,20 @@ function updatePlayers(nick)
 	}
 	else if (nickIndex != -1)
 	{
+		// If they have been and still are in the lobby, only update their presence.
 		[name, status] = formatPlayerListEntry(nick, presence);
-		playerList[nickIndex] = name;
 		presenceList[nickIndex] = status;
-		nickList[nickIndex] = nick;
 	}
 	else if (presence)
 	{
+		// If new nick, notify player and add nick to GUI
 		[name, status] = formatPlayerListEntry(nick, presence);
 		playerList.push(name);
 		presenceList.push(status);
 		nickList.push(nick)
 		addChatMessage({ "text":"/special " + nick + " has joined.", "key":g_specialKey});
 	}
+	// Push new data to GUI
 	playersBox.list_name = playerList;
 	playersBox.list_status = presenceList;
 	playersBox.list = nickList;
@@ -252,10 +253,7 @@ function formatPlayerListEntry(nickname, presence)
 // The following function notifies players when someone quits or joins the lobby.
 function playerChanged(playerNick, joined)
 {
-	if (joined)
-		addChatMessage({ "text":"/special " + playerNick + " has joined.", "key":g_specialKey});
-	else
-		addChatMessage({ "text":"/special " + playerNick + " has left.", "key":g_specialKey});
+	return;
 }
 
 function selectGame(selected)
@@ -424,6 +422,8 @@ function onTick()
 							case "player updated":
 								updatePlayers(message.data);
 								break;
+							case "playerchange":
+								playerChanged(message.data.substring(1), message.data.substring(0, 1) === "j" ? true : false);
 						}
 						break
 				}
