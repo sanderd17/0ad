@@ -203,6 +203,9 @@ function updatePlayerList()
 			var color = '[color="0 125 0"]';
 			var status = color + "Online" + color_close;
 			break;
+		case "offline":
+			// skip this one, only temporary
+			continue;
 		default:
 			warn("Unknown presence '"+p.presence+"'");
 			break;
@@ -364,53 +367,68 @@ function onTick()
 			break;
 		switch (message.type)
 		{
-			case "mucmessage":
-				addChatMessage({ "from": message.from, "text": message.text , "color": "250 250 250"});
+		case "mucmessage":
+			addChatMessage({ "from": message.from, "text": message.text , "color": "250 250 250"});
+			break;
+		case "muc":
+			var nick = message.text;
+			switch(message.level)
+			{
+			case "join":
+				playerChanged(message.data, true);
 				break;
-			case "system":
-				switch (message.level)
+			case "leave":
+				playerChanged(message.data, false);
+				break;
+			case "nick":
+				// TODO: handle nick changes here
+				// old nick := nick
+				// new nick := msg.data
+				warn("nickchange from "+nick+" to "+message.data);
+				break;
+			}
+			break
+		case "system":
+			switch (message.level)
+			{
+			case "standard":
+				addChatMessage({ "from": "system", "text": message.text, "color": "0 150 0" });
+				if (message.text == "disconnected")
 				{
-					case "standard":
-						addChatMessage({ "from": "system", "text": message.text, "color": "0 150 0" });
-						if (message.text == "disconnected")
-						{
-							// Clear the list of games and the list of players
-							updateGameList();
-							updatePlayerList();
-							// Disable the 'host' button
-							getGUIObjectByName("hostButton").enabled = false;
-						}
-						else if (message.text == "connected")
-						{
-							getGUIObjectByName("hostButton").enabled = true;
-						}
-						break;
-					case "error":
-						addChatMessage({ "from": "system", "text": message.text, "color": "150 0 0" });
-						break;
-					case "internal":
-						switch (message.text)
-						{
-							case "gamelist updated":
-								updateGameList();
-								var t = new Date(Date.now());
-								var time = t.getHours() % 12 + ":" + twoDigits(t.getMinutes()) + ":" + twoDigits(t.getSeconds());
-								getGUIObjectByName("updateStatusText").caption = "Updated at " + time;
-								break;
-							// Why not move these two to some message.type of "mucplayer"?
-							// That could also handle stuff like nickchanges and that
-							case "playerlist updated":
-								updatePlayerList();
-								break;
-							case "playerchange":
-								playerChanged(message.data.substring(1), message.data.substring(0, 1) === "j" ? true : false)
-								break;
-						}
-						break
+					// Clear the list of games and the list of players
+					updateGameList();
+					updatePlayerList();
+					// Disable the 'host' button
+					getGUIObjectByName("hostButton").enabled = false;
+				}
+				else if (message.text == "connected")
+				{
+					getGUIObjectByName("hostButton").enabled = true;
 				}
 				break;
-			default:
-				error("Unrecognised message type "+message.type);
+			case "error":
+				addChatMessage({ "from": "system", "text": message.text, "color": "150 0 0" });
+				break;
+			case "internal":
+				switch (message.text)
+				{
+				case "gamelist updated":
+					updateGameList();
+					var t = new Date(Date.now());
+					var time = t.getHours() % 12 + ":" + twoDigits(t.getMinutes()) + ":" + twoDigits(t.getSeconds());
+					getGUIObjectByName("updateStatusText").caption = "Updated at " + time;
+					break;
+				// Why not move these two to some message.type of "mucplayer"?
+				// That could also handle stuff like nickchanges and that
+				case "playerlist updated":
+					updatePlayerList();
+					break;
+				}
+				break
+			}
+			break;
+		default:
+			error("Unrecognised message type "+message.type);
 		}
 	}
 }
