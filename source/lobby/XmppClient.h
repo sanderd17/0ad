@@ -116,10 +116,10 @@ public:
 	void SendIqRegisterGame(CScriptVal data);
 	void SendIqUnregisterGame();
 	void SendIqChangeStateGame(std::string nbp, std::string players);
-	void SetPresence(const std::string& presence);
 	void SetNick(const std::string& nick);
 	void kick(const std::string& nick, const std::string& reason);
 	void ban(const std::string& nick, const std::string& reason);
+	void SetPresence(const std::string& presence);
 	void GetPresence(const std::string& nickname, std::string& presence);
 
 	CScriptValRooted GUIGetPlayerList();

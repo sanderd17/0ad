@@ -535,18 +535,6 @@ void XmppClient::CreateSimpleMessage(std::string type, std::string text, std::st
 	PushGuiMessage(message);
 }
 
-void XmppClient::SetPresence(const std::string& presence)
-{
-	if (presence == "available")
-		_mucRoom->setPresence(Presence::Available);
-	else if (presence == "playing")
-		_mucRoom->setPresence(Presence::DND);
-	else if (presence == "away")
-		_mucRoom->setPresence(Presence::Away);
-	else
-		LOGERROR(L"Unknown presence '%hs'", presence.c_str());
-}
-
 // Request nick change, real change via mucRoomHandler
 void XmppClient::SetNick(const std::string& nick)
 {
@@ -561,6 +549,20 @@ void XmppClient::kick(const std::string& nick, const std::string& reason)
 void XmppClient::ban(const std::string& nick, const std::string& reason)
 {
 	_mucRoom->ban(nick, reason);
+}
+
+void XmppClient::SetPresence(const std::string& presence)
+{
+#define IF(x,y) if (presence == x) _mucRoom->setPresence(Presence::y)
+	IF("available", Available);
+	else IF("chat", Chat);
+	else IF("away", Away);
+	else IF("playing", DND);
+	else IF("gone", XA);
+	else IF("offline", Unavailable);
+	// The others are not to be set
+#undef IF
+	else LOGERROR(L"Unknown presence '%hs'", presence.c_str());
 }
 
 void XmppClient::GetPresence(const std::string& nick, std::string& presence)
