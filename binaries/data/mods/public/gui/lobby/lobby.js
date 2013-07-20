@@ -177,19 +177,50 @@ function updateGameList()
 }
 
 // TODO: Handle all of that in playerChanged (possibly rename to playerPresenceChanged)?
-function updatePlayerList()
+function updatePlayers(nick)
 {
-	var nickname = Engine.GetDefaultPlayerName();
-	var playerList = Engine.GetPlayerList();
-
-	list_name = [];
-	list_status = [];
-
-	for each (p in playerList)
+	var presence = Engine.LobbyGetPlayerPresence(nick);
+	var playersBox = getGUIObjectByName("playersBox");
+	var playerList = playersBox.list_name;
+	var presenceList = playersBox.list_status;
+	var nickList = playersBox.list;
+	var nickIndex = nickList.indexOf(nick);
+	warn("Nick: "+nick+", is in lobby, presence: "+presence);
+	if (nickIndex != -1 && presence == "offline")
 	{
+		playerList.splice(nickIndex, 1);
+		presenceList.splice(nickIndex, 1);
+		nickList.splice(nickIndex, 1);
+		addChatMessage({ "text":"/special " + nick + " has left.", "key":g_specialKey});
+	}
+	else if (nickIndex != -1)
+	{
+		[name, status] = formatPlayerListEntry(nick, presence);
+		playerList[nickIndex] = name;
+		presenceList[nickIndex] = status;
+		nickList[nickIndex] = nick;
+	}
+	else if (presence)
+	{
+		[name, status] = formatPlayerListEntry(nick, presence);
+		playerList.push(name);
+		presenceList.push(status);
+		nickList.push(nick)
+		addChatMessage({ "text":"/special " + nick + " has joined.", "key":g_specialKey});
+	}
+	playersBox.list_name = playerList;
+	playersBox.list_status = presenceList;
+	playersBox.list = nickList;
+	if (playersBox.selected >= playersBox.list.length)
+		playersBox.selected = -1;
+}
+
+// The following function colorizes and formats the entries in the player list.
+function formatPlayerListEntry(nickname, presence)
+{
 		// Set colors based on player status
 		var color_close = '[/color]'; 
-		switch (p.presence)
+		switch (presence)
 		{
 		case "playing":
 			var color = '[color="125 0 0"]';
@@ -204,27 +235,18 @@ function updatePlayerList()
 			var status = color + "Online" + color_close;
 			break;
 		default:
-			warn("Unknown presence '"+p.presence+"'");
+			warn("Unknown presence '"+presence+"'");
 			break;
 		}
 
 		// Highlight the local player's nickname
-		if (p.name == nickname)
+		if (nickname == Engine.GetDefaultPlayerName())
 			color = '[color="orange"]';
 
-		var name = color + p.name + color_close;
+		var name = color + nickname + color_close;
 
 		// Push this player's name and status onto the list
-		list_name.push(name);
-		list_status.push(status);
-	}
-
-	var playersBox = getGUIObjectByName("playersBox")
-	playersBox.list_name = list_name;
-	playersBox.list_status = list_status;
-	playersBox.list = list_name;
-	if (playersBox.selected >= playersBox.list.length)
-		playersBox.selected = -1;
+		return [name, status];
 }
 
 // The following function notifies players when someone quits or joins the lobby.
@@ -399,11 +421,8 @@ function onTick()
 								break;
 							// Why not move these two to some message.type of "mucplayer"?
 							// That could also handle stuff like nickchanges and that
-							case "playerlist updated":
-								updatePlayerList();
-								break;
-							case "playerchange":
-								playerChanged(message.data.substring(1), message.data.substring(0, 1) === "j" ? true : false)
+							case "player updated":
+								updatePlayers(message.data);
 								break;
 						}
 						break
