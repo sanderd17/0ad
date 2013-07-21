@@ -205,7 +205,7 @@ function formatPlayerListEntry(nickname, presence)
 	}
 
 	// Highlight the local player's nickname
-	if (nickname == Engine.GetDefaultPlayerName())
+	if (nickname == g_Name)
 		color = '[color="orange"]';
 
 	var name = color + nickname + color_close;
@@ -356,7 +356,7 @@ function onTick()
 			switch(message.level)
 			{
 			case "join":
-				if (nick == Engine.GetDefaultPlayerName())
+				if (nick == g_Name)
 				{
 					// We just joined, we need to get the full player list
 					[playerList, presenceList, nickList] = [[],[],[]];
@@ -381,7 +381,7 @@ function onTick()
 				playerList.splice(nickIndex, 1);
 				presenceList.splice(nickIndex, 1);
 				nickList.splice(nickIndex, 1);
-				addChatMessage({ "text": "/special " + nick + "has left.", "key": g_specialKey });
+				addChatMessage({ "text": "/special " + nick + " has left.", "key": g_specialKey });
 				break;
 			case "nick":
 				if (nickIndex == -1) // This shouldn't ever happen
@@ -419,7 +419,10 @@ function onTick()
 				{
 					// Clear the list of games and the list of players
 					updateGameList();
-					updatePlayerList();
+					var playersBox = getGUIObjectByName("playersBox");
+					playersBox.list_name = [];
+					playersBox.list_status = [];
+					playersBox.list = [];
 					// Disable the 'host' button
 					getGUIObjectByName("hostButton").enabled = false;
 				}
@@ -481,6 +484,7 @@ function handleSpecialCommand(text)
 		break;
 	case "nick":
 		Engine.LobbySetNick(nick);
+		g_Name = nick;
 		break;
 	case "kick": // TODO: Split reason from nick and pass it too, for now just support "/kick nick"
 			// also allow quoting nicks (and/or prevent users from changing it here, but that doesn't help if the spammer uses a different client)
@@ -530,7 +534,7 @@ function ircFormat(text, from, color, key)
 	time = new Date(Date.now());
 	function warnUnsupportedCommand(command, from) // Function to warn only local player
 	{
-		if (from === Engine.GetDefaultPlayerName())
+		if (from === g_Name)
 			addChatMessage({ "from": "system", "text": "We're sorry, the '" + command + "' command is not supported.", "color": "255 0 0" });
 		return;
 	}
@@ -578,7 +582,7 @@ function updateSpamandDetect(text, from)
 	// Block spammers and notify the player if they are blocked.
 	if(from in g_spammers)
 	{
-		if (from == Engine.GetDefaultPlayerName())
+		if (from == g_Name)
 		{
 			addChatMessage({ "from": "system", "text": "Please do not spam. You have been blocked for thirty seconds.", "color": "255 0 0" });
 		}
