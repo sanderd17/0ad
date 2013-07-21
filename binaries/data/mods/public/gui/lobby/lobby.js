@@ -176,87 +176,42 @@ function updateGameList()
 		selectGame(getGUIObjectByName("gamesBox").selected)
 }
 
-function updatePlayers(nick)
-{
-	var presence = Engine.LobbyGetPlayerPresence(nick);
-	var playersBox = getGUIObjectByName("playersBox");
-	var playerList = playersBox.list_name;
-	var presenceList = playersBox.list_status;
-	var nickList = playersBox.list;
-	var nickIndex = nickList.indexOf(nick);
-	//warn("Nick: "+nick+", is in lobby, presence: "+presence);
-	if (nickIndex != -1 && presence == "offline")
-	{
-		// If nick left, notify player and remove nick from GUI
-		playerList.splice(nickIndex, 1);
-		presenceList.splice(nickIndex, 1);
-		nickList.splice(nickIndex, 1);
-		addChatMessage({ "text":"/special " + nick + " has left.", "key":g_specialKey});
-	}
-	else if (nickIndex != -1)
-	{
-		// If they have been and still are in the lobby, only update their presence.
-		[name, status] = formatPlayerListEntry(nick, presence);
-		presenceList[nickIndex] = status;
-	}
-	else if (presence)
-	{
-		// If new nick, notify player and add nick to GUI
-		[name, status] = formatPlayerListEntry(nick, presence);
-		playerList.push(name);
-		presenceList.push(status);
-		nickList.push(nick)
-		addChatMessage({ "text":"/special " + nick + " has joined.", "key":g_specialKey});
-	}
-	// Push new data to GUI
-	playersBox.list_name = playerList;
-	playersBox.list_status = presenceList;
-	playersBox.list = nickList;
-	if (playersBox.selected >= playersBox.list.length)
-		playersBox.selected = -1;
-}
-
 // The following function colorizes and formats the entries in the player list.
 function formatPlayerListEntry(nickname, presence)
 {
-		// Set colors based on player status
-		var color_close = '[/color]'; 
-		switch (presence)
-		{
-		case "playing":
-			var color = '[color="125 0 0"]';
-			var status = color + "Busy" + color_close;
-			break;
-		case "away":
-			var color = '[color="0 0 125"]';
-			var status = color + "Away" + color_close;
-			break;
-		case "available":
-			var color = '[color="0 125 0"]';
-			var status = color + "Online" + color_close;
-			break;
-		case "offline":
-			// skip this one, only temporary
-			continue;
-		default:
-			warn("Unknown presence '"+presence+"'");
-			break;
-		}
+	// Set colors based on player status
+	var color_close = '[/color]'; 
+	switch (presence)
+	{
+	case "playing":
+		var color = '[color="125 0 0"]';
+		var status = color + "Busy" + color_close;
+		break;
+	case "away":
+		var color = '[color="0 0 125"]';
+		var status = color + "Away" + color_close;
+		break;
+	case "available":
+		var color = '[color="0 125 0"]';
+		var status = color + "Online" + color_close;
+		break;
+	case "offline":
+		var color = '[color="0 0 0"]';
+		var status = color + "Offline" + color_close;
+		break;
+	default:
+		warn("Unknown presence '"+presence+"'");
+		break;
+	}
 
-		// Highlight the local player's nickname
-		if (nickname == Engine.GetDefaultPlayerName())
-			color = '[color="orange"]';
+	// Highlight the local player's nickname
+	if (nickname == Engine.GetDefaultPlayerName())
+		color = '[color="orange"]';
 
-		var name = color + nickname + color_close;
+	var name = color + nickname + color_close;
 
-		// Push this player's name and status onto the list
-		return [name, status];
-}
-
-// The following function notifies players when someone quits or joins the lobby.
-function playerChanged(playerNick, joined)
-{
-	return;
+	// Push this player's name and status onto the list
+	return [name, status];
 }
 
 function selectGame(selected)
@@ -392,22 +347,69 @@ function onTick()
 			break;
 		case "muc":
 			var nick = message.text;
+			var presence = Engine.LobbyGetPlayerPresence(nick);
+			var playersBox = getGUIObjectByName("playersBox");
+			var playerList = playersBox.list_name;
+			var presenceList = playersBox.list_status;
+			var nickList = playersBox.list;
+			var nickIndex = nickList.indexOf(nick);
 			switch(message.level)
 			{
 			case "join":
-				playerChanged(message.data, true);
+				if (nick == Engine.GetDefaultPlayerName())
+				{
+					// We just joined, we need to get the full player list
+					[playerList, presenceList, nickList] = [[],[],[]];
+					for each (p in Engine.GetPlayerList())
+					{
+						var [name, status] = formatPlayerListEntry(p.name, p.presence);
+						playerList.push(name);
+						presenceList.push(status);
+						nickList.push(p.name);
+					}
+					break;
+				}
+				var [name, status] = formatPlayerListEntry(nick, presence);
+				playerList.push(name);
+				presenceList.push(status);
+				nickList.push(nick);
+				addChatMessage({ "text": "/special " + nick + " has joined.", "key": g_specialKey });
 				break;
 			case "leave":
-				playerChanged(message.data, false);
+				if (nickIndex == -1) // Left, but not present (TODO: warn about this?)
+					break;
+				playerList.splice(nickIndex, 1);
+				presenceList.splice(nickIndex, 1);
+				nickList.splice(nickIndex, 1);
+				addChatMessage({ "text": "/special " + nick + "has left.", "key": g_specialKey });
 				break;
 			case "nick":
-				// TODO: handle nick changes here
-				// old nick := nick
-				// new nick := msg.data
-				warn("nickchange from "+nick+" to "+message.data);
+				if (nickIndex == -1) // This shouldn't ever happen
+					break;
+				var [name, status] = formatPlayerListEntry(message.data, presence); // TODO: actually we don't want to change the presence here, so use what was used before
+				playerList[nickIndex] = name;
+				// presence stays the same
+				nickList[nickIndex] = message.data;
+				addChatMessage({ "text": "/special " + nick + " is now known as " + message.data + ".", "key": g_specialKey });
+				break;
+			case "presence":
+				if (nickIndex == -1) // This shouldn't ever happen
+					break;
+				var [name, status] = formatPlayerListEntry(nick, presence);
+				presenceList[nickIndex] = status;
+				playerList[nickIndex] = name;
+				break;
+			default:
+				warn("Unknown message.level '" + message.level + "'");
 				break;
 			}
-			break
+			// Push new data to GUI
+			playersBox.list_name = playerList;
+			playersBox.list_status = presenceList;
+			playersBox.list = nickList;
+			if (playersBox.selected >= playersBox.list.length)
+				playersBox.selected = -1;
+			break;
 		case "system":
 			switch (message.level)
 			{
@@ -437,11 +439,6 @@ function onTick()
 					var t = new Date(Date.now());
 					var time = t.getHours() % 12 + ":" + twoDigits(t.getMinutes()) + ":" + twoDigits(t.getSeconds());
 					getGUIObjectByName("updateStatusText").caption = "Updated at " + time;
-					break;
-				// Why not move these two to some message.type of "mucplayer"?
-				// That could also handle stuff like nickchanges and that
-				case "player updated":
-					updatePlayers(message.data);
 					break;
 				}
 				break

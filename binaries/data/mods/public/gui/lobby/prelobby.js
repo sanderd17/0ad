@@ -91,7 +91,7 @@ function onTick()
 		if (!message)
 			break;
 
-		if (message.type == "system" && message.text == "player updated")
+		if (message.type == "muc" && message.level == "join")
 		{
 			// We are connected, switch to the lobby page
 			Engine.PopGuiPage();
