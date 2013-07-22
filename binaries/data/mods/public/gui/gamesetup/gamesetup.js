@@ -157,7 +157,7 @@ function initMain()
 		numPlayersSelection.list = players;
 		numPlayersSelection.list_data = players;
 		numPlayersSelection.selected = MAX_PLAYERS - 1;
-		
+
 		var gameSpeed = getGUIObjectByName("gameSpeed");
 		gameSpeed.hidden = false;
 		getGUIObjectByName("gameSpeedText").hidden = true;
@@ -181,16 +181,12 @@ function initMain()
 		populationCaps.onSelectionChange = function()
 		{
 			if (this.selected != -1)
-			{
 				g_GameAttributes.settings.PopulationCap = POPULATION_CAP_DATA[this.selected];
-			}
-			
+
 			if (!g_IsInGuiUpdate)
-			{
 				updateGameAttributes();
-			}
 		}
-		
+
 		var startingResourcesL = getGUIObjectByName("startingResources");
 		startingResourcesL.list = STARTING_RESOURCES;
 		startingResourcesL.list_data = STARTING_RESOURCES_DATA;
@@ -198,30 +194,22 @@ function initMain()
 		startingResourcesL.onSelectionChange = function()
 		{
 			if (this.selected != -1)
-			{
 				g_GameAttributes.settings.StartingResources = STARTING_RESOURCES_DATA[this.selected];
-			}
-			
+
 			if (!g_IsInGuiUpdate)
-			{
 				updateGameAttributes();
-			}
 		}
-		
+
 		var victoryConditions = getGUIObjectByName("victoryCondition");
 		victoryConditions.list = VICTORY_TEXT;
 		victoryConditions.list_data = VICTORY_DATA;
 		victoryConditions.onSelectionChange = function()
 		{	// Update attributes so other players can see change
 			if (this.selected != -1)
-			{
 				g_GameAttributes.settings.GameType = VICTORY_DATA[this.selected];
-			}
 
 			if (!g_IsInGuiUpdate)
-			{
 				updateGameAttributes();
-			}
 		};
 		victoryConditions.selected = VICTORY_DEFAULTIDX;
 
@@ -231,14 +219,10 @@ function initMain()
 		mapSize.onSelectionChange = function()
 		{	// Update attributes so other players can see change
 			if (this.selected != -1)
-			{
 				g_GameAttributes.settings.Size = g_MapSizes.tiles[this.selected];
-			}
 
 			if (!g_IsInGuiUpdate)
-			{
 				updateGameAttributes();
-			}
 		};
 		mapSize.selected = 0;
 
@@ -247,9 +231,7 @@ function initMain()
 			g_GameAttributes.settings.RevealMap = this.checked;
 
 			if (!g_IsInGuiUpdate)
-			{
 				updateGameAttributes();
-			}
 		};
 
 		getGUIObjectByName("lockTeams").onPress = function()
@@ -257,19 +239,15 @@ function initMain()
 			g_GameAttributes.settings.LockTeams = this.checked;
 
 			if (!g_IsInGuiUpdate)
-			{
 				updateGameAttributes();
-			}
 		};
-		
+
 		getGUIObjectByName("enableCheats").onPress = function()
 		{	// Update attributes so other players can see change
 			g_GameAttributes.settings.CheatsEnabled = this.checked;
 
 			if (!g_IsInGuiUpdate)
-			{
 				updateGameAttributes();
-			}
 		};
 	}
 	else
@@ -312,13 +290,9 @@ function initMain()
 		getGUIObjectByName("enableCheats").checked = false;
 		g_GameAttributes.settings.CheatsEnabled = false;
 		if (g_IsController)
-		{
 			getGUIObjectByName("enableCheats").hidden = false;
-		}
 		else
-		{
 			getGUIObjectByName("enableCheatsText").hidden = false;
-		}
 	}
 
 	// Settings for all possible player slots
@@ -343,30 +317,21 @@ function initMain()
 		team.onSelectionChange = function()
 		{	// Update team
 			if (this.selected != -1)
-			{
 				g_GameAttributes.settings.PlayerData[playerSlot].Team = this.selected - 1;
-			}
 
 			if (!g_IsInGuiUpdate)
-			{
 				updateGameAttributes();
-			}
 		};
-		
 
 		// Set events
 		var civ = getGUIObjectByName("playerCiv["+i+"]");
 		civ.onSelectionChange = function()
 		{	// Update civ
 			if ((this.selected != -1)&&(g_GameAttributes.mapType !== "scenario"))
-			{
 				g_GameAttributes.settings.PlayerData[playerSlot].Civ = this.list_data[this.selected];
-			}
 
 			if (!g_IsInGuiUpdate)
-			{
 				updateGameAttributes();
-			}
 		};
 	}
 
@@ -483,15 +448,11 @@ function getMapPreview(map)
 function getSetting(settings, defaults, property)
 {
 	if (settings && (property in settings))
-	{
 		return settings[property];
-	}
 
 	// Use defaults
 	if (defaults && (property in defaults))
-	{
 		return defaults[property];
-	}
 
 	return undefined;
 }
@@ -501,7 +462,7 @@ function initCivNameList()
 {
 	// Cache civ data
 	g_CivData = loadCivData();
-	
+
 	// Extract name/code, and skip civs that are explicitly disabled
 	// (intended for unusable incomplete civs)
 	var civList = [ 
@@ -509,7 +470,7 @@ function initCivNameList()
 		for each (civ in g_CivData) 
 			if (civ.SelectableInGameSetup !== false) 
 	]; 
-	
+
 	// Alphabetically sort the list, ignoring case
 	civList.sort(sortNameIgnoreCase);
 
@@ -519,7 +480,7 @@ function initCivNameList()
 	//  Add random civ to beginning of list 
 	civListNames.unshift("[color=\"orange\"]Random"); 
 	civListCodes.unshift("random"); 
-	
+
 	// Update the dropdowns
 	for (var i = 0; i < MAX_PLAYERS; ++i)
 	{
@@ -561,16 +522,14 @@ function initMapNameList()
 		var mapData = loadMapData(file);
 
 		if (g_GameAttributes.mapFilter && mapData && testFilter(g_GameAttributes.mapFilter, mapData.settings))
-		{
 			mapList.push({ "name": getMapDisplayName(file), "file": file });
-		}
 	}
 
 	// Alphabetically sort the list, ignoring case
 	mapList.sort(sortNameIgnoreCase);
 	if (g_GameAttributes.mapType == "random")
 		mapList.unshift({ "name": "[color=\"orange\"]Random[/color]", "file": "random" });
-	
+
 	var mapListNames = [ map.name for each (map in mapList) ];
 	var mapListFiles = [ map.file for each (map in mapList) ];
 
@@ -591,10 +550,8 @@ function initMapNameList()
 function loadMapData(name)
 {
 	if (!name)
-	{
 		return undefined;
-	}
-	
+
 	if (name == "random")
 	{
 		g_MapData[name] = {settings : {"Name" : "Random", "Description" : "Randomly selects a map from the list"}};
@@ -659,9 +616,8 @@ function onTick()
 		{
 			var message = Engine.PollNetworkClient();
 			if (!message)
-			{
 				break;
-			}
+
 			handleNetMessage(message);
 		}
 	}
@@ -693,9 +649,7 @@ function selectNumPlayers(num)
 	{
 		// Add player data from defaults
 		for (var i = pData.length; i < num; ++i)
-		{
 			g_GameAttributes.settings.PlayerData.push(g_DefaultPlayerData[i]);
-		}
 	}
 
 	// Some players may have lost their assigned slot
@@ -802,20 +756,16 @@ function selectMap(name)
 	if (mapData !== "Random")
 		for (var prop in mapSettings)
 			g_GameAttributes.settings[prop] = mapSettings[prop];
-	
+
 	// Use default AI if the map doesn't specify any explicitly
 	for (var i = 0; i < g_GameAttributes.settings.PlayerData.length; ++i)
 	{
 		if (!('AI' in g_GameAttributes.settings.PlayerData[i]))
-		{
 			g_GameAttributes.settings.PlayerData[i].AI = g_DefaultPlayerData[i].AI;
-		}
 		if (!('AIDiff' in g_GameAttributes.settings.PlayerData[i]))
-		{
 			g_GameAttributes.settings.PlayerData[i].AIDiff = g_DefaultPlayerData[i].AIDiff;
-		}
 	}
-	
+
 	// Reset player assignments on map change
 	if (!g_IsNetworked)
 	{	// Slot 1
@@ -830,9 +780,7 @@ function selectMap(name)
 			var player = g_PlayerAssignments[guid].player;
 
 			if (player <= MAX_PLAYERS && player > numPlayers)
-			{
 				Engine.AssignNetworkPlayer(player, "");
-			}
 		}
 	}
 
@@ -861,13 +809,13 @@ function launchGame()
 	//  (this is synchronized because we're the host) 
 	var cultures = [];
 	for each (var civ in g_CivData)
-		if ((civ.Culture !== undefined)&&(cultures.indexOf(civ.Culture) < 0)&&(civ.SelectableInGameSetup == undefined)||(civ.SelectableInGameSetup))
+		if (civ.Culture !== undefined && cultures.indexOf(civ.Culture) < 0 && (civ.SelectableInGameSetup === undefined || civ.SelectableInGameSetup))
 			cultures.push(civ.Culture);
 	var allcivs = new Array(cultures.length);
 	for (var i = 0; i < allcivs.length; ++i)
 		allcivs[i] = [];
 	for each (var civ in g_CivData)
-		if ((civ.Culture !== undefined)&&(civ.SelectableInGameSetup == undefined)||(civ.SelectableInGameSetup))
+		if (civ.Culture !== undefined && (civ.SelectableInGameSetup === undefined || civ.SelectableInGameSetup))
 			allcivs[cultures.indexOf(civ.Culture)].push(civ.Code);
 
 	const romanNumbers = [undefined, "I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
@@ -878,14 +826,13 @@ function launchGame()
 		if (g_GameAttributes.settings.PlayerData[i].Civ == "random") 
 			g_GameAttributes.settings.PlayerData[i].Civ = civs[Math.floor(Math.random()*civs.length)]; 
 		// Setting names for AI players. Check if the player is AI and the match is not a scenario
-		if ((g_GameAttributes.mapType !== "scenario")&&(g_GameAttributes.settings.PlayerData[i].AI))
+		if (g_GameAttributes.mapType !== "scenario" && g_GameAttributes.settings.PlayerData[i].AI)
 		{
 			// Get the civ specific names
 			if (g_CivData[g_GameAttributes.settings.PlayerData[i].Civ].AINames !== undefined)
 				var civAINames = shuffleArray(g_CivData[g_GameAttributes.settings.PlayerData[i].Civ].AINames);
 			else
 				var civAINames = [g_CivData[g_GameAttributes.settings.PlayerData[i].Civ].Name];
-
 			// Choose the name
 			var usedName = 0;
 			if (i < civAINames.length)
@@ -1102,17 +1049,17 @@ function onGameAttributesChange()
 		// Show only needed player slots
 		getGUIObjectByName("playerBox["+i+"]").hidden = (i >= numPlayers);
 
+		// Show player data or defaults as necessary
 		if (i >= numPlayers)
 			continue;
 
-		// Show player data or defaults as necessary
 		var pName = getGUIObjectByName("playerName["+i+"]");
 		var pCiv = getGUIObjectByName("playerCiv["+i+"]");
 		var pCivText = getGUIObjectByName("playerCivText["+i+"]");
 		var pTeam = getGUIObjectByName("playerTeam["+i+"]");
 		var pTeamText = getGUIObjectByName("playerTeamText["+i+"]");
 		var pColor = getGUIObjectByName("playerColour["+i+"]");
-		
+
 		// Player data / defaults
 		var pData = mapSettings.PlayerData ? mapSettings.PlayerData[i] : {};
 		var pDefs = g_DefaultPlayerData ? g_DefaultPlayerData[i] : {};
@@ -1124,7 +1071,7 @@ function onGameAttributesChange()
 
 		var team = getSetting(pData, pDefs, "Team");
 		var civ = getSetting(pData, pDefs, "Civ");
-		
+
 		// For clients or scenarios, hide some player dropdowns
 		if (!g_IsController || g_GameAttributes.mapType == "scenario")
 		{
@@ -1134,13 +1081,9 @@ function onGameAttributesChange()
 			pTeam.hidden = true;
 			// Set text values
 			if (civ == "random")
-			{
 				pCivText.caption = "[color=\"orange\"]Random";
-			}
 			else
-			{
 				pCivText.caption = g_CivData[civ].Name;
-			}
 			pTeamText.caption = (team !== undefined && team >= 0) ? team+1 : "-";
 		}
 		else if (g_GameAttributes.mapType == "random")
@@ -1169,14 +1112,10 @@ function updateGameAttributes()
 	{
 		Engine.SetNetworkGameAttributes(g_GameAttributes);
 		if (g_IsController && g_LoadingState >= 2)
-		{
 			sendRegisterGameStanza();
-		}
 	}
 	else
-	{
 		onGameAttributesChange();
-	}
 }
 
 function updatePlayerList()
