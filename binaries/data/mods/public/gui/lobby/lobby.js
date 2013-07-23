@@ -242,7 +242,7 @@ function selectGame(selected)
 	// If not we should pass this info to prevent name clashes when hosting the random map
 
 	// Search the selected map in the scenarios
-	if (fileExists("maps/scenarios/" + name + ".xml");
+	if (fileExists("maps/scenarios/" + name + ".xml"))
 		mapData = Engine.LoadMapSettings("maps/scenarios/" + file + ".xml");
 
 	// Search for the selected map in the random maps
