@@ -822,6 +822,24 @@ void SetBoundingBoxDebugOverlay(void* UNUSED(cbdata), bool enabled)
 	ICmpSelectable::ms_EnableDebugOverlays = enabled;
 }
 
+// Config getter/setter functions
+void SetConfigValue(void* UNUSED(cbdata), std::wstring key, std::wstring value)
+{
+	g_ConfigDB.CreateValue(CFG_USER, CStrW(key).ToUTF8())->m_String = CStrW(value).ToUTF8();
+	g_ConfigDB.WriteFile(CFG_USER);
+}
+
+std::wstring GetConfigValue(void* UNUSED(cbdata), std::wstring key)
+{
+	CStr value;
+	CFG_GET_VAL(CStrW(key).ToUTF8(), String, value);
+	std::wstring data = value.FromUTF8();
+	if (!data.empty())
+		return data;
+	else
+		return "";
+}
+
 } // namespace
 
 void GuiScriptingInit(ScriptInterface& scriptInterface)
@@ -934,4 +952,8 @@ void GuiScriptingInit(ScriptInterface& scriptInterface)
 	scriptInterface.RegisterFunction<void, std::string, std::string, &LobbyKick>("LobbyKick");
 	scriptInterface.RegisterFunction<void, std::string, std::string, &LobbyBan>("LobbyBan");
 	scriptInterface.RegisterFunction<std::string, std::string, &LobbyGetPlayerPresence>("LobbyGetPlayerPresence");
+	
+	// Config Functions
+	scriptInterface.RegisterFunction<std::wstring, &GetConfigValue>("GetConfigValue");
+	scriptInterface.RegisterFunction<void, std::wstring, std::wstring, &SetConfigValue>("SetConfigValue");
 }
