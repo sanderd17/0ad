@@ -12,8 +12,10 @@ var g_mapSizes = {};
 
 function init(attribs)
 {
-	if (attribs.name) g_Name = attribs.name;
-	else error("No name");
+	if (attribs.name)
+		g_Name = attribs.name;
+	else
+		error("No name");
 
 	g_mapSizes = initMapSizes();
 	g_mapSizes.names.push("Any");
@@ -236,34 +238,17 @@ function selectGame(selected)
 
 	var mapData = null;
 
+	// TODO: Don't we already know if the game is a scenario or a random map?
+	// If not we should pass this info to prevent name clashes when hosting the random map
+
 	// Search the selected map in the scenarios
-	var mapFiles = getXMLFileList("maps/scenarios/");
-	for (var i = 0; i < mapFiles.length; ++i)
-	{
-		// TODO: Use VFS function to check if the file is present (also see below)
-		var file = mapFiles[i];
-		if(name == file)
-		{
-			mapData = Engine.LoadMapSettings("maps/scenarios/"+file);
-			break;
-		}
-	}
+	if (fileExists("maps/scenarios/" + name + ".xml");
+		mapData = Engine.LoadMapSettings("maps/scenarios/" + file + ".xml");
 
 	// Search for the selected map in the random maps
 	if(!mapData)
-	{
-		// TODO: Why not check if we have the file and try to load it? (There surely is a VFS function exposed to allow us to check that)
-		var mapFiles = getJSONFileList("maps/random/");
-		for (var i = 0; i < mapFiles.length; ++i)
-		{
-			var file = mapFiles[i];
-			if(name == file)
-			{
-				mapData = parseJSONData("maps/random/"+file+".json");
-				break;
-			}
-		}
-	}
+		if (fileExists("maps/random/" + name + ".json"))
+			mapData = parseJSONData("maps/random/" + name + ".json");
 
 	if(!mapData)
 		log("Map '"+ name +"'  not found");
