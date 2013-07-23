@@ -176,64 +176,42 @@ function updateGameList()
 		selectGame(getGUIObjectByName("gamesBox").selected)
 }
 
-// TODO: Handle all of that in playerChanged (possibly rename to playerPresenceChanged)?
-function updatePlayerList()
+// The following function colorizes and formats the entries in the player list.
+function formatPlayerListEntry(nickname, presence)
 {
-	var nickname = Engine.GetDefaultPlayerName();
-	var playerList = Engine.GetPlayerList();
-
-	list_name = [];
-	list_status = [];
-
-	for each (p in playerList)
+	// Set colors based on player status
+	var color_close = '[/color]'; 
+	switch (presence)
 	{
-		// Set colors based on player status
-		var color_close = '[/color]'; 
-		switch (p.presence)
-		{
-		case "playing":
-			var color = '[color="125 0 0"]';
-			var status = color + "Busy" + color_close;
-			break;
-		case "away":
-			var color = '[color="0 0 125"]';
-			var status = color + "Away" + color_close;
-			break;
-		case "available":
-			var color = '[color="0 125 0"]';
-			var status = color + "Online" + color_close;
-			break;
-		default:
-			warn("Unknown presence '"+p.presence+"'");
-			break;
-		}
-
-		// Highlight the local player's nickname
-		if (p.name == nickname)
-			color = '[color="orange"]';
-
-		var name = color + p.name + color_close;
-
-		// Push this player's name and status onto the list
-		list_name.push(name);
-		list_status.push(status);
+	case "playing":
+		var color = '[color="125 0 0"]';
+		var status = color + "Busy" + color_close;
+		break;
+	case "away":
+		var color = '[color="0 0 125"]';
+		var status = color + "Away" + color_close;
+		break;
+	case "available":
+		var color = '[color="0 125 0"]';
+		var status = color + "Online" + color_close;
+		break;
+	case "offline":
+		var color = '[color="0 0 0"]';
+		var status = color + "Offline" + color_close;
+		break;
+	default:
+		warn("Unknown presence '"+presence+"'");
+		break;
 	}
 
-	var playersBox = getGUIObjectByName("playersBox")
-	playersBox.list_name = list_name;
-	playersBox.list_status = list_status;
-	playersBox.list = list_name;
-	if (playersBox.selected >= playersBox.list.length)
-		playersBox.selected = -1;
-}
+	// Highlight the local player's nickname
+	if (nickname == g_Name)
+		color = '[color="orange"]';
 
-// The following function notifies players when someone quits or joins the lobby.
-function playerChanged(playerNick, joined)
-{
-	if (joined)
-		addChatMessage({ "text":"/special " + playerNick + " has joined.", "key":g_specialKey});
-	else
-		addChatMessage({ "text":"/special " + playerNick + " has left.", "key":g_specialKey});
+	var name = color + nickname + color_close;
+
+	// Push this player's name and status onto the list
+	return [name, status];
 }
 
 function selectGame(selected)
@@ -364,53 +342,113 @@ function onTick()
 			break;
 		switch (message.type)
 		{
-			case "mucmessage":
-				addChatMessage({ "from": message.from, "text": message.text , "color": "250 250 250"});
-				break;
-			case "system":
-				switch (message.level)
+		case "mucmessage":
+			addChatMessage({ "from": message.from, "text": message.text , "color": "250 250 250"});
+			break;
+		case "muc":
+			var nick = message.text;
+			var presence = Engine.LobbyGetPlayerPresence(nick);
+			var playersBox = getGUIObjectByName("playersBox");
+			var playerList = playersBox.list_name;
+			var presenceList = playersBox.list_status;
+			var nickList = playersBox.list;
+			var nickIndex = nickList.indexOf(nick);
+			switch(message.level)
+			{
+			case "join":
+				if (nick == g_Name)
 				{
-					case "standard":
-						addChatMessage({ "from": "system", "text": message.text, "color": "0 150 0" });
-						if (message.text == "disconnected")
-						{
-							// Clear the list of games and the list of players
-							updateGameList();
-							updatePlayerList();
-							// Disable the 'host' button
-							getGUIObjectByName("hostButton").enabled = false;
-						}
-						else if (message.text == "connected")
-						{
-							getGUIObjectByName("hostButton").enabled = true;
-						}
-						break;
-					case "error":
-						addChatMessage({ "from": "system", "text": message.text, "color": "150 0 0" });
-						break;
-					case "internal":
-						switch (message.text)
-						{
-							case "gamelist updated":
-								updateGameList();
-								var t = new Date(Date.now());
-								var time = t.getHours() % 12 + ":" + twoDigits(t.getMinutes()) + ":" + twoDigits(t.getSeconds());
-								getGUIObjectByName("updateStatusText").caption = "Updated at " + time;
-								break;
-							// Why not move these two to some message.type of "mucplayer"?
-							// That could also handle stuff like nickchanges and that
-							case "playerlist updated":
-								updatePlayerList();
-								break;
-							case "playerchange":
-								playerChanged(message.data.substring(1), message.data.substring(0, 1) === "j" ? true : false)
-								break;
-						}
-						break
+					// We just joined, we need to get the full player list
+					[playerList, presenceList, nickList] = [[],[],[]];
+					for each (p in Engine.GetPlayerList())
+					{
+						var [name, status] = formatPlayerListEntry(p.name, p.presence);
+						playerList.push(name);
+						presenceList.push(status);
+						nickList.push(p.name);
+					}
+					break;
 				}
+				var [name, status] = formatPlayerListEntry(nick, presence);
+				playerList.push(name);
+				presenceList.push(status);
+				nickList.push(nick);
+				addChatMessage({ "text": "/special " + nick + " has joined.", "key": g_specialKey });
+				break;
+			case "leave":
+				if (nickIndex == -1) // Left, but not present (TODO: warn about this?)
+					break;
+				playerList.splice(nickIndex, 1);
+				presenceList.splice(nickIndex, 1);
+				nickList.splice(nickIndex, 1);
+				addChatMessage({ "text": "/special " + nick + " has left.", "key": g_specialKey });
+				break;
+			case "nick":
+				if (nickIndex == -1) // This shouldn't ever happen
+					break;
+				var [name, status] = formatPlayerListEntry(message.data, presence); // TODO: actually we don't want to change the presence here, so use what was used before
+				playerList[nickIndex] = name;
+				// presence stays the same
+				nickList[nickIndex] = message.data;
+				addChatMessage({ "text": "/special " + nick + " is now known as " + message.data + ".", "key": g_specialKey });
+				break;
+			case "presence":
+				if (nickIndex == -1) // This shouldn't ever happen
+					break;
+				var [name, status] = formatPlayerListEntry(nick, presence);
+				presenceList[nickIndex] = status;
+				playerList[nickIndex] = name;
 				break;
 			default:
-				error("Unrecognised message type "+message.type);
+				warn("Unknown message.level '" + message.level + "'");
+				break;
+			}
+			// Push new data to GUI
+			playersBox.list_name = playerList;
+			playersBox.list_status = presenceList;
+			playersBox.list = nickList;
+			if (playersBox.selected >= playersBox.list.length)
+				playersBox.selected = -1;
+			break;
+		case "system":
+			switch (message.level)
+			{
+			case "standard":
+				addChatMessage({ "from": "system", "text": message.text, "color": "0 150 0" });
+				if (message.text == "disconnected")
+				{
+					// Clear the list of games and the list of players
+					updateGameList();
+					var playersBox = getGUIObjectByName("playersBox");
+					playersBox.list_name = [];
+					playersBox.list_status = [];
+					playersBox.list = [];
+					// Disable the 'host' button
+					getGUIObjectByName("hostButton").enabled = false;
+				}
+				else if (message.text == "connected")
+				{
+					getGUIObjectByName("hostButton").enabled = true;
+				}
+				break;
+			case "error":
+				addChatMessage({ "from": "system", "text": message.text, "color": "150 0 0" });
+				break;
+			case "internal":
+				switch (message.text)
+				{
+				case "gamelist updated":
+					updateGameList();
+					var t = new Date(Date.now());
+					var time = t.getHours() % 12 + ":" + twoDigits(t.getMinutes()) + ":" + twoDigits(t.getSeconds());
+					getGUIObjectByName("updateStatusText").caption = "Updated at " + time;
+					break;
+				}
+				break
+			}
+			break;
+		default:
+			error("Unrecognised message type "+message.type);
 		}
 	}
 }
@@ -433,7 +471,7 @@ function handleSpecialCommand(text)
 	if (text[0] != '/')
 		return false;
 
-	var [cmd, msg] = ircSplit(text);
+	var [cmd, nick] = ircSplit(text);
 
 	switch (cmd)
 	{
@@ -444,11 +482,16 @@ function handleSpecialCommand(text)
 	case "back":
 		Engine.LobbySetPlayerPresence("available");
 		break;
-	case "kick": // TODO
-		warn("/kick not yet implemented");
+	case "nick":
+		Engine.LobbySetNick(nick);
+		g_Name = nick;
 		break;
-	case "ban": // TODO
-		warn("/ban not yet implemented");
+	case "kick": // TODO: Split reason from nick and pass it too, for now just support "/kick nick"
+			// also allow quoting nicks (and/or prevent users from changing it here, but that doesn't help if the spammer uses a different client)
+		Engine.LobbyKick(nick, "");
+		break;
+	case "ban": // TODO: Split reason from nick and pass it too, for now just support "/ban nick"
+		Engine.LobbyBan(nick, "");
 		break;
 	default:
 		return false;
@@ -482,7 +525,7 @@ function ircSplit(string)
 	var idx = string.indexOf(' ');
 	if (idx != -1)
 		return [string.substr(1,idx-1), string.substr(idx+1)];
-	return [string.substr(1)];
+	return [string.substr(1), ""];
 }
 
 // The following formats text in an IRC-like way
@@ -491,7 +534,7 @@ function ircFormat(text, from, color, key)
 	time = new Date(Date.now());
 	function warnUnsupportedCommand(command, from) // Function to warn only local player
 	{
-		if (from === Engine.GetDefaultPlayerName())
+		if (from === g_Name)
 			addChatMessage({ "from": "system", "text": "We're sorry, the '" + command + "' command is not supported.", "color": "255 0 0" });
 		return;
 	}
@@ -539,7 +582,7 @@ function updateSpamandDetect(text, from)
 	// Block spammers and notify the player if they are blocked.
 	if(from in g_spammers)
 	{
-		if (from == Engine.GetDefaultPlayerName())
+		if (from == g_Name)
 		{
 			addChatMessage({ "from": "system", "text": "Please do not spam. You have been blocked for thirty seconds.", "color": "255 0 0" });
 		}
