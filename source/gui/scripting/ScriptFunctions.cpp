@@ -823,21 +823,17 @@ void SetBoundingBoxDebugOverlay(void* UNUSED(cbdata), bool enabled)
 }
 
 // Config getter/setter functions
-void SetConfigValue(void* UNUSED(cbdata), std::wstring key, std::wstring value)
+void SetConfigValue(void* UNUSED(cbdata), std::string key, std::string value)
 {
-	g_ConfigDB.CreateValue(CFG_USER, CStrW(key).ToUTF8())->m_String = CStrW(value).ToUTF8();
+	g_ConfigDB.CreateValue(CFG_USER, key)->m_String = value;
 	g_ConfigDB.WriteFile(CFG_USER);
 }
 
-std::wstring GetConfigValue(void* UNUSED(cbdata), std::wstring key)
+std::string GetConfigValue(void* UNUSED(cbdata), std::string key)
 {
-	CStr value;
-	CFG_GET_VAL(CStrW(key).ToUTF8(), String, value);
-	std::wstring data = value.FromUTF8();
-	if (!data.empty())
-		return data;
-	else
-		return "";
+	std::string value;
+	CFG_GET_VAL(key, String, value);
+	return value;
 }
 
 } // namespace
@@ -954,6 +950,6 @@ void GuiScriptingInit(ScriptInterface& scriptInterface)
 	scriptInterface.RegisterFunction<std::string, std::string, &LobbyGetPlayerPresence>("LobbyGetPlayerPresence");
 	
 	// Config Functions
-	scriptInterface.RegisterFunction<std::wstring, &GetConfigValue>("GetConfigValue");
-	scriptInterface.RegisterFunction<void, std::wstring, std::wstring, &SetConfigValue>("SetConfigValue");
+	scriptInterface.RegisterFunction<void, std::string, std::string, &SetConfigValue>("SetConfigValue");
+	scriptInterface.RegisterFunction<std::string, std::string, &GetConfigValue>("GetConfigValue");
 }
