@@ -245,11 +245,19 @@ CScriptVal StartSavedGame(void* cbdata, std::wstring name)
 	return metadata.get();
 }
 
-void SaveGame(void* cbdata)
+void SaveGame(void* cbdata, std::wstring filename, std::wstring description)
 {
 	CGUIManager* guiManager = static_cast<CGUIManager*> (cbdata);
 
-	if (SavedGames::Save(L"quicksave", *g_Game->GetSimulation2(), guiManager, g_Game->GetPlayerID()) < 0)
+	if (SavedGames::Save(filename, description, *g_Game->GetSimulation2(), guiManager, g_Game->GetPlayerID()) < 0)
+		LOGERROR(L"Failed to save game");
+}
+
+void SaveGamePrefix(void* cbdata, std::wstring prefix, std::wstring description)
+{
+	CGUIManager* guiManager = static_cast<CGUIManager*> (cbdata);
+
+	if (SavedGames::SavePrefix(prefix, description, *g_Game->GetSimulation2(), guiManager, g_Game->GetPlayerID()) < 0)
 		LOGERROR(L"Failed to save game");
 }
 
@@ -765,21 +773,17 @@ void SetBoundingBoxDebugOverlay(void* UNUSED(cbdata), bool enabled)
 }
 
 // Config getter/setter functions
-void SetConfigValue(void* UNUSED(cbdata), std::wstring key, std::wstring value)
+void SetConfigValue(void* UNUSED(cbdata), std::string key, std::string value)
 {
-	g_ConfigDB.CreateValue(CFG_USER, CStrW(key).ToUTF8())->m_String = CStrW(value).ToUTF8();
+	g_ConfigDB.CreateValue(CFG_USER, key)->m_String = value;
 	g_ConfigDB.WriteFile(CFG_USER);
 }
 
-std::wstring GetConfigValue(void* UNUSED(cbdata), std::wstring key)
+std::string GetConfigValue(void* UNUSED(cbdata), std::string key)
 {
-	CStr value;
-	CFG_GET_VAL(CStrW(key).ToUTF8(), String, value);
-	std::wstring data = value.FromUTF8();
-	if (!data.empty())
-		return data;
-	else
-		return "";
+	std::string value;
+	CFG_GET_VAL(key, String, value);
+	return value;
 }
 
 } // namespace
@@ -819,7 +823,8 @@ void GuiScriptingInit(ScriptInterface& scriptInterface)
 	scriptInterface.RegisterFunction<CScriptVal, std::wstring, &StartSavedGame>("StartSavedGame");
 	scriptInterface.RegisterFunction<std::vector<CScriptValRooted>, &GetSavedGames>("GetSavedGames");
 	scriptInterface.RegisterFunction<bool, std::wstring, &DeleteSavedGame>("DeleteSavedGame");
-	scriptInterface.RegisterFunction<void, &SaveGame>("SaveGame");
+	scriptInterface.RegisterFunction<void, std::wstring, std::wstring, &SaveGame>("SaveGame");
+	scriptInterface.RegisterFunction<void, std::wstring, std::wstring, &SaveGamePrefix>("SaveGamePrefix");
 	scriptInterface.RegisterFunction<void, &QuickSave>("QuickSave");
 	scriptInterface.RegisterFunction<void, &QuickLoad>("QuickLoad");
 
@@ -886,6 +891,6 @@ void GuiScriptingInit(ScriptInterface& scriptInterface)
 	scriptInterface.RegisterFunction<std::string, std::string, &LobbyGetPlayerPresence>("LobbyGetPlayerPresence");
 	
 	// Config Functions
-	scriptInterface.RegisterFunction<std::wstring, &GetConfigValue>("GetConfigValue");
-	scriptInterface.RegisterFunction<void, std::wstring, std::wstring, &SetConfigValue>("SetConfigValue");
+	scriptInterface.RegisterFunction<void, std::string, std::string, &SetConfigValue>("SetConfigValue");
+	scriptInterface.RegisterFunction<std::string, std::string, &GetConfigValue>("GetConfigValue");
 }
