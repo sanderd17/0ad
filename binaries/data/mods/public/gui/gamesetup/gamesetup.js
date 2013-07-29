@@ -391,9 +391,7 @@ function handleNetMessage(message)
 		updatePlayerList();
 
 		if (g_IsController)
-		{
 			sendRegisterGameStanza();
-		}
 		break;
 
 	case "start":
@@ -824,7 +822,7 @@ function launchGame()
 	for (var i = 0; i < numPlayers; ++i) 
 	{ 
 		civs = allcivs[Math.floor(Math.random()*allcivs.length)];
-		
+
 		if (g_GameAttributes.settings.PlayerData[i].Civ == "random") 
 			g_GameAttributes.settings.PlayerData[i].Civ = civs[Math.floor(Math.random()*civs.length)]; 
 		// Setting names for AI players. Check if the player is AI and the match is not a scenario
@@ -844,7 +842,7 @@ function launchGame()
 			for (var j = 0; j < numPlayers; ++j) 
 				if (g_GameAttributes.settings.PlayerData[j].Name.indexOf(chosenName) !== -1)
 					usedName++;
-			
+
 			// Assign civ specific names to AI players
 			if (usedName)
 				g_GameAttributes.settings.PlayerData[i].Name = chosenName + " " + romanNumbers[usedName+1];
@@ -1114,9 +1112,7 @@ function updateGameAttributes()
     {
 		Engine.SetNetworkGameAttributes(g_GameAttributes);
 		if (g_IsController && g_LoadingState >= 2)
-		{
 			sendRegisterGameStanza();
-		}
 	}
 	else
     {
@@ -1233,16 +1229,13 @@ function updatePlayerList()
 				};
 			}
 		}
-		else
+		// There was a human, so make sure we don't have any AI left
+		// over in their slot, if we're in charge of the attributes
+		else if (g_IsController && g_GameAttributes.settings.PlayerData[playerSlot].AI && g_GameAttributes.settings.PlayerData[playerSlot].AI != "")
 		{
-			// There was a human, so make sure we don't have any AI left
-			// over in their slot, if we're in charge of the attributes
-			if (g_IsController && g_GameAttributes.settings.PlayerData[playerSlot].AI && g_GameAttributes.settings.PlayerData[playerSlot].AI != "")
-			{
-				g_GameAttributes.settings.PlayerData[playerSlot].AI = "";
-				if (g_IsNetworked)
-					Engine.SetNetworkGameAttributes(g_GameAttributes);
-			}
+			g_GameAttributes.settings.PlayerData[playerSlot].AI = "";
+			if (g_IsNetworked)
+				Engine.SetNetworkGameAttributes(g_GameAttributes);
 		}
 
 		var assignBox = getGUIObjectByName("playerAssignment["+i+"]");
