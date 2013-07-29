@@ -12,7 +12,7 @@
   <Cost>
     <BuildTime>20</BuildTime>
     <Resources>
-      <food>200</food>
+      <food>150</food>
     </Resources>
   </Cost>
   <Footprint>
@@ -38,6 +38,9 @@
     <stone>10</stone>
     <metal>10</metal>
   </Loot>
+  <Position>
+    <Anchor>pitch</Anchor>
+  </Position>
   <ResourceDropsite>
     <Types>food wood stone metal</Types>
   </ResourceDropsite>
