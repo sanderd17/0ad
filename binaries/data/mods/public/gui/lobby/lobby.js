@@ -243,7 +243,7 @@ function selectGame(selected)
 
 	// Search the selected map in the scenarios
 	if (fileExists("maps/scenarios/" + name + ".xml"))
-		mapData = Engine.LoadMapSettings("maps/scenarios/" + file + ".xml");
+		mapData = Engine.LoadMapSettings("maps/scenarios/" + name + ".xml");
 
 	// Search for the selected map in the random maps
 	if(!mapData)
@@ -477,6 +477,10 @@ function handleSpecialCommand(text)
 		break;
 	case "ban": // TODO: Split reason from nick and pass it too, for now just support "/ban nick"
 		Engine.LobbyBan(nick, "");
+		break;
+	case "quit":
+		lobbyStop();
+		Engine.SwitchGuiPage("page_pregame.xml");
 		break;
 	default:
 		return false;
