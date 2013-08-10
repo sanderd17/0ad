@@ -27,7 +27,6 @@ function lobbyStart()
 
 	var username = getGUIObjectByName("connectUsername").caption;
 	var password = getGUIObjectByName("connectPassword").caption;
-	var playername = sanitisePlayerName(getGUIObjectByName("joinPlayerName").caption);
 	var feedback = getGUIObjectByName("connectFeedback");
 
 	if (!username || !password)
@@ -37,7 +36,7 @@ function lobbyStart()
 	}
 
 	feedback.caption = "Connecting..";
-	Engine.StartXmppClient(username, password, "arena", playername);
+	Engine.StartXmppClient(username, password, "arena", sanitisePlayerName(username));
 	g_LobbyIsConnecting=true;
 	Engine.ConnectXmppClient();
 }
@@ -47,21 +46,21 @@ function lobbyStartRegister()
 	if (g_LobbyIsConnecting != false)
 		return;
 
-	var account = getGUIObjectByName("registerUsername").caption;
-	var password = getGUIObjectByName("registerPassword").caption;
+	var account = getGUIObjectByName("connectUsername").caption;
+	var password = getGUIObjectByName("connectPassword").caption;
 	var passwordAgain = getGUIObjectByName("registerPasswordAgain").caption;
 	var feedback = getGUIObjectByName("registerFeedback");
 
 	if (!account || !password || !passwordAgain)
 	{
-		feedback.caption = "Account name or password empty";
+		feedback.caption = "Login or password empty";
 		return;
 	}
 
 	if (password != passwordAgain)
 	{
 		feedback.caption = "Password mismatch";
-		getGUIObjectByName("registerPassword").caption = "";
+		getGUIObjectByName("connectPassword").caption = "";
 		getGUIObjectByName("registerPasswordAgain").caption = "";
 		return;
 	}
@@ -95,13 +94,12 @@ function onTick()
 		{
 			// We are connected, switch to the lobby page
 			Engine.PopGuiPage();
-			var sname = sanitisePlayerName(getGUIObjectByName("joinPlayerName").caption);
-			Engine.SwitchGuiPage("page_lobby.xml", { name: sname } );
-
 			var username = getGUIObjectByName("connectUsername").caption;
 			var password = getGUIObjectByName("connectPassword").caption;
+			Engine.SwitchGuiPage("page_lobby.xml", { name: sanitisePlayerName(username) } );
+
 			// Store latest player name
-			Engine.SaveMPConfig(sname, Engine.GetDefaultMPServer());
+			Engine.SaveMPConfig(sanitisePlayerName(username), Engine.GetDefaultMPServer());
 			// Store latest username and password
 			Engine.SetDefaultLobbyPlayerPair(username, password);
 
@@ -114,8 +112,6 @@ function onTick()
 			getGUIObjectByName("connectFeedback").caption = message.text;
 			Engine.StopXmppClient();
 			g_LobbyIsConnecting = false;
-			getGUIObjectByName("connectUsername").caption = getGUIObjectByName("registerUsername").caption;
-			getGUIObjectByName("connectPassword").caption = getGUIObjectByName("registerPassword").caption;
 			getGUIObjectByName("pageRegister").hidden = true;
 			getGUIObjectByName("pageConnect").hidden = false;
 		}
