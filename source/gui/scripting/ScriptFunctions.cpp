@@ -58,6 +58,7 @@
 
 #include "js/jsapi.h"
 
+#include "lib/external_libraries/cryptopp.h"
 /*
  * This file defines a set of functions that are available to GUI scripts, to allow
  * interaction with the rest of the engine.
@@ -822,6 +823,44 @@ void SetBoundingBoxDebugOverlay(void* UNUSED(cbdata), bool enabled)
 	ICmpSelectable::ms_EnableDebugOverlays = enabled;
 }
 
+//Non-public secure PBKDF2 hash function with salting and 10,000 iterations
+void SecureHash(const std::string& saltIn, std::string& text)
+{
+        const int DIGESTSIZE = CryptoPP::SHA256::DIGESTSIZE;
+        const int ITERATIONS = 10000;
+ 
+        static const byte salt[DIGESTSIZE] = {
+                244, 243, 249, 244, 32, 33, 34, 35, 10, 11, 12, 13, 14, 15, 16, 17,
+                18, 19, 20, 32, 33, 244, 224, 127, 129, 130, 140, 153, 133, 123, 234, 123 };
+       
+        // initialize buffer
+        byte buffer[DIGESTSIZE];
+        CryptoPP::SHA256 hash;
+        hash.Update((byte*)saltIn.c_str(), saltIn.length());
+        hash.Update((byte*)text.c_str(), text.length());
+        hash.Final(buffer);
+ 
+        // PBKDF2 to transform the buffer:
+        CryptoPP::PKCS5_PBKDF2_HMAC<CryptoPP::SHA256>().DeriveKey(
+                buffer, DIGESTSIZE, 0, buffer, DIGESTSIZE, salt, DIGESTSIZE, ITERATIONS);
+ 
+        static const char base16[] = "0123456789ABCDEF";
+        char hex[2 * DIGESTSIZE];
+        for(int i = 0; i < DIGESTSIZE; ++i)
+        {
+                hex[i*2] = base16[buffer[i] >> 4];              // 4 high bits
+                hex[i*2 + 1] = base16[buffer[i] & 0x0F];// 4 low bits
+        }
+        text.assign(hex, sizeof(hex));
+}
+ 
+// Public hash interface.
+std::string EncryptPassword(void* UNUSED(cbdata), std::string user, std::string pass)
+{
+        SecureHash(user, pass);
+        return pass;
+}
+
 } // namespace
 
 void GuiScriptingInit(ScriptInterface& scriptInterface)
@@ -885,6 +924,7 @@ void GuiScriptingInit(ScriptInterface& scriptInterface)
 	scriptInterface.RegisterFunction<bool, std::string, &HotkeyIsPressed_>("HotkeyIsPressed");
 	scriptInterface.RegisterFunction<void, std::wstring, &DisplayErrorDialog>("DisplayErrorDialog");
 	scriptInterface.RegisterFunction<CScriptVal, &GetProfilerState>("GetProfilerState");
+	scriptInterface.RegisterFunction<std::string, std::string, std::string, &EncryptPassword>("EncryptPassword");
 
 	// User report functions
 	scriptInterface.RegisterFunction<bool, &IsUserReportEnabled>("IsUserReportEnabled");

@@ -38,6 +38,7 @@
 #undef IS_BIG_ENDIAN
 
 #include "cryptopp/sha.h"
+#include "cryptopp/pwdbased.h"
 
 #if MSC_VERSION
 # pragma warning(pop)

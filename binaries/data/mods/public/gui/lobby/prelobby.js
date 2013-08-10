@@ -36,7 +36,7 @@ function lobbyStart()
 	}
 
 	feedback.caption = "Connecting..";
-	Engine.StartXmppClient(username, password, "arena", sanitisePlayerName(username));
+	Engine.StartXmppClient(username, Engine.EncryptPassword(password, username), "arena", sanitisePlayerName(username));
 	g_LobbyIsConnecting=true;
 	Engine.ConnectXmppClient();
 }
@@ -66,7 +66,7 @@ function lobbyStartRegister()
 	}
 
 	feedback.caption = "Registering...";
-	Engine.StartRegisterXmppClient(account, password);
+	Engine.StartRegisterXmppClient(account, Engine.EncryptPassword(password, account));
 	g_LobbyIsConnecting = true;
 	Engine.ConnectXmppClient();
 }
