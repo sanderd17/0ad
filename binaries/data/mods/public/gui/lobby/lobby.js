@@ -501,6 +501,10 @@ function addChatMessage(msg)
 	// Format Text
 	var formatted = ircFormat(text, from, color, msg.key);
 
+	// Highlight local user's nick
+	if (formatted.indexOf(g_Name) != -1 && g_Name != from)
+		formatted = formatted.replace(new RegExp(g_Name, "g"), '[color="orange"]' + g_Name + '[/color]');
+
 	// If there is text, add it to the chat box.
 	if (formatted)
 	{
