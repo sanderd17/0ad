@@ -327,7 +327,10 @@ function onTick()
 			break;
 		switch (message.type)
 		{
-		case "mucmessage":
+		case "mucmessage": // For room messages
+			addChatMessage({ "from": message.from, "text": message.text , "color": "250 250 250"});
+			break;
+		case "message": // For private messages
 			addChatMessage({ "from": message.from, "text": message.text , "color": "250 250 250"});
 			break;
 		case "muc":
