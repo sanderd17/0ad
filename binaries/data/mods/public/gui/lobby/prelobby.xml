@@ -27,25 +27,17 @@
 				Connect to the game lobby.
 			</object>
 			<object type="text" size="0 40 200 70" style="RightLabelText">
-				Player name:
-			</object>
-			<object name="joinPlayerName" type="input" size="210 40 100%-32 64" style="StoneInput">
-				<action on="Load">
-					this.caption = Engine.GetDefaultPlayerName();
-				</action>
-			</object>
-			<object type="text" size="0 80 200 110" style="RightLabelText">
 				Login:
 			</object>
-			<object name="connectUsername" type="input" size="210 80 100%-32 104" style="StoneInput">
+			<object name="connectUsername" type="input" size="210 40 100%-32 64" style="StoneInput">
 				<action on="Load">
 					this.caption = Engine.GetDefaultLobbyPlayerUsername();
 				</action>
 			</object>
-			<object type="text" size="0 120 200 150" style="RightLabelText">
+			<object type="text" size="0 80 200 110" style="RightLabelText">
 				Password:
 			</object>
-			<object name="connectPassword" type="input" size="210 120 100%-32 144" style="StoneInput">
+			<object name="connectPassword" type="input" size="210 80 100%-32 104" style="StoneInput">
 				<action on="Load">
 				this.caption = Engine.GetDefaultLobbyPlayerPassword();
 				</action>
@@ -76,20 +68,12 @@
 
 		<object name="pageRegister" size="0 32 100% 100%" hidden="true">
 			<object type="text" style="CenteredLabelText" size="0 0 400 30">
-				Register to the game lobby.
+				Registration.
 			</object>
 			<object type="text" size="0 40 200 70" style="RightLabelText">
-				Account name:
-			</object>
-			<object name="registerUsername" type="input" size="210 40 100%-32 64" style="StoneInput"/>
-			<object type="text" size="0 80 200 110" style="RightLabelText">
-				Password:
-			</object>
-			<object name="registerPassword" type="input" size="210 80 100%-32 104" style="StoneInput"/>
-			<object type="text" size="0 120 200 150" style="RightLabelText">
 				Password again:
 			</object>
-			<object name="registerPasswordAgain" type="input" size="210 120 100%-32 144" style="StoneInput"/>
+			<object name="registerPasswordAgain" type="input" size="210 40 100%-32 64" style="StoneInput"/>
 			<object name="registerFeedback" type="text" style="CenteredLabelText" size="32 150 100%-32 180" textcolor="red"/>
 			<object type="button" size="32 100%-60 122 100%-32" style="StoneButton">
 				Back

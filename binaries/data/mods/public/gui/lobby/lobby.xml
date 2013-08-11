@@ -79,10 +79,10 @@
 			<object name="gamesBox"
 				style="StoneList"
 				type="olist"
-				size="350 0 100% 100%-40"
+				size="345 0 100% 100%-35"
 				tooltip_style="pgFloatingToolTip"
-				sprite_heading="colour:0 0 0 255"
-				textcolor="210 100 0 255">
+				sprite_heading="colour:0 0 0 170"
+				textcolor="255 255 255">
 				<action on="SelectionChange"> selectGame(this.selected);</action>
 				<def id="name" heading="Name" color="0 60 0" width="180"/>
 				<!--<def id="ip" heading="IP" color="0 128 128" width="170"/>-->
@@ -93,7 +93,7 @@
 			</object>
 
 			<!-- START Filter panel -->
-			<object name="filterPanel" size="380 100%-140 700 100%-10" type="image" sprite="BackgroundIndentFillDark" hidden="true">
+			<object name="filterPanel" size="375 100%-140 700 100%-10" type="image" sprite="BackgroundIndentFillDark" hidden="true">
 				<object type="text" size="10 10 110 30" text_align="left" textcolor="white">Map size :</object>
 				<object name="mapSizeFilter"
 					type="dropdown"
@@ -135,21 +135,21 @@
 			</object>
 			<!-- END Filter panel -->
 
-			<object name="gamesBar" size="350 100%-35 100% 100%">
-				<object type="button" style="StoneButton" size="0 0 20 20">
+			<object name="gamesBar" size="345 100%-30 100% 100%">
+				<object type="button" style="StoneButton" size="0 0 25 20">
 					>>
 					<action on="Press"><![CDATA[
 						if(this.caption == ">>")
 						{
 							this.caption = "<<";
 							getGUIObjectByName("filterPanel").hidden = false;
-							getGUIObjectByName("gamesBox").size="350 0 100% 100%-150";
+							getGUIObjectByName("gamesBox").size="345 0 100% 100%-145";
 						}
 						else 
 						{
 							this.caption = ">>";
 							getGUIObjectByName("filterPanel").hidden = true;
-							getGUIObjectByName("gamesBox").size="350 0 100% 100%-40";
+							getGUIObjectByName("gamesBox").size="345 0 100% 100%-35";
 						}
 					]]></action>
 				</object>
@@ -158,24 +158,24 @@
 		<!-- END Upper part of the gui containing the list of games and some details about the selected game -->
 
 		<!-- START Lower part of the gui containing the chat and the list of players -->
-		<object size="25 0%+400 100%-25 100%-25">
+		<object size="25 0%+395 100%-25 100%-25">
 			<object name="playersBox"
 				style="StoneList"
 				type="olist"
-				size="100%-210 0 100% 100%-10"
+				size="100%-210 0 100% 100%"
 				tooltip_style="pgFloatingToolTip"
-				sprite_heading="colour:0 0 0">
+				sprite_heading="colour:0 0 0 170">
 				<def id="status" heading="Status" color="0 60 60" width="60"/>
 				<def id="name" heading="Name" color="0 60 0" width="50"/>
 			</object>
 
-			<object name="chatPanel" size="0 0 100%-220 100%-10" type="image" sprite="BackgroundIndentFillDark">
-				<object name="chatText" size="3 1 100%-1 100%-25" type="text" style="ChatPanel"/>
-				<object name="chatInput" size="2 100%-23 100%-66 100%-3" type="input" style="StoneInput">
+			<object name="chatPanel" size="0 0 100%-215 100%" type="image" sprite="BackgroundIndentFillDark">
+				<object name="chatText" size="1 1 100%-1 100%-25" type="text" style="ChatPanel"/>
+				<object name="chatInput" size="0 100%-25 100%-66 100%" type="input" style="StoneInput">
 					<action on="Press">submitChatInput();</action>
 				</object>
 
-				<object size="100%-65 100%-25 100%-1 100%" type="button" style="StoneButton">
+				<object size="100%-65 100%-25 100%-1 100%-1" type="button" style="StoneButton">
 					Send
 					<action on="Press">submitChatInput();</action>
 				</object>

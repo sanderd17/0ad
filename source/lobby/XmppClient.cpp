@@ -465,7 +465,7 @@ void XmppClient::handleMessage( const Message& msg, MessageSession * /*session*/
 
 	CScriptValRooted message;
 	GetScriptInterface().Eval("({ 'type':'message'})", message);
-	GetScriptInterface().SetProperty(message.get(), "from", msg.from().resource());
+	GetScriptInterface().SetProperty(message.get(), "from", msg.from().username());
 	GetScriptInterface().SetProperty(message.get(), "text", msg.body());
 	PushGuiMessage(message);
 }

@@ -243,7 +243,7 @@ function selectGame(selected)
 
 	// Search the selected map in the scenarios
 	if (fileExists("maps/scenarios/" + name + ".xml"))
-		mapData = Engine.LoadMapSettings("maps/scenarios/" + file + ".xml");
+		mapData = Engine.LoadMapSettings("maps/scenarios/" + name + ".xml");
 
 	// Search for the selected map in the random maps
 	if(!mapData)
@@ -327,7 +327,10 @@ function onTick()
 			break;
 		switch (message.type)
 		{
-		case "mucmessage":
+		case "mucmessage": // For room messages
+			addChatMessage({ "from": message.from, "text": message.text , "color": "250 250 250"});
+			break;
+		case "message": // For private messages
 			addChatMessage({ "from": message.from, "text": message.text , "color": "250 250 250"});
 			break;
 		case "muc":
@@ -478,6 +481,10 @@ function handleSpecialCommand(text)
 	case "ban": // TODO: Split reason from nick and pass it too, for now just support "/ban nick"
 		Engine.LobbyBan(nick, "");
 		break;
+	case "quit":
+		lobbyStop();
+		Engine.SwitchGuiPage("page_pregame.xml");
+		break;
 	default:
 		return false;
 	}
@@ -496,6 +503,10 @@ function addChatMessage(msg)
 
 	// Format Text
 	var formatted = ircFormat(text, from, color, msg.key);
+
+	// Highlight local user's nick
+	if (formatted.indexOf(g_Name) != -1 && g_Name != from)
+		formatted = formatted.replace(new RegExp(g_Name, "g"), '[color="orange"]' + g_Name + '[/color]');
 
 	// If there is text, add it to the chat box.
 	if (formatted)
