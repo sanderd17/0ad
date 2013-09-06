@@ -21,12 +21,6 @@ from sleekxmpp.xmlstream import ElementBase, register_stanza_plugin, ET
 from sleekxmpp.xmlstream.handler import Callback
 from sleekxmpp.xmlstream.matcher import StanzaPath
 
-from xml.dom.minidom import Document
-
-## Configuration ##
-configDEMOModOn = False
-## !Configuration ##
-
 class BasicGameList(ElementBase):
   name = 'query'
   namespace = 'jabber:iq:gamelist'
@@ -65,16 +59,6 @@ class XpartaMuPP(sleekxmpp.ClientXMPP):
     # Store mapping of nicks and XmppIDs
     self.m_xmppIdToNick = {}
 
-    #DEMO
-    if configDEMOModOn:
-      self.storeGame("666.666.666.666", "Unplayable map", "666.666.666.666", "Serengeti", "128", "gold rush", "4", "4", "alice, bob")
-      self.storeGame("666.666.666.667", "Unreachale liberty", "666.666.666.667", "oasis", "256", "conquest", "2", "4", "alice, bob")
-      self.storeGame("666.666.666.700", "No map preview", "666.666.666.700", "Bridge demo", "256", "conquest", "1", "4", "alice")
-      self.storeGame("666.666.666.668", "Waiting.. (your nickname must be 'alice' or 'bob') ", "666.666.666.668", "oasis", "256", "conquest", "2", "4", "alice, bob", "waiting")
-      self.storeGame("666.666.666.669", "Running.. (this game should not be sent)", "666.666.666.669", "oasis", "256", "conquest", "2", "4", "alice, bob", "running")
-      #for i in range(50):
-      #  self.storeGame("666.666.666."+str(i), "X"+str(i), "666.666.666."+str(i), "Oasis", "large", "conquest", "1", "4", "alice, bob")
-
     register_stanza_plugin(Iq, BasicGameList)
     self.register_handler(Callback('Iq Gamelist',
                                        StanzaPath('iq/gamelist'),
@@ -95,11 +79,6 @@ class XpartaMuPP(sleekxmpp.ClientXMPP):
     self.send_presence()
     self.get_roster()
     logging.info("xpartamupp started")
-
-    #DEMO
-    #self.DEMOregisterGame()
-    #self.DEMOchangeStateGame()
-    #self.DEMOrequestGameList()
 
   def message(self, msg):
     """
@@ -192,45 +171,6 @@ class XpartaMuPP(sleekxmpp.ClientXMPP):
     except:
       logging.error("Failed to send game list")
 
-  def DEMOrequestGameList(self):
-    """
-    Test function
-    """
-    iq = self.Iq()
-    iq['type'] = 'get'
-    iq['gamelist']['field'] = 'x'
-    iq['to'] = self.boundjid.full
-    iq.send(now=True, block=False)
-    return True
-
-  def DEMOregisterGame(self):
-    """
-    Test function
-    """
-    stz = BasicGameList()
-    stz.addGame("DEMOregister","DEMOip","garbage","DEMOmap","","","2","2","bob charlie")
-    stz['command'] = 'register'
-    iq = self.Iq()
-    iq['type'] = 'set'
-    iq['to'] = self.boundjid.full
-    iq.setPayload(stz)
-    iq.send(now=True, block=False)
-    return True
-
-  def DEMOchangeStateGame(self):
-    """
-    Test function
-    """
-    stz = BasicGameList()
-    stz.addGame("","","running","","","","1","","")
-    stz['command'] = 'changestate'
-    iq = self.Iq()
-    iq['type'] = 'set'
-    iq['to'] = self.boundjid.full
-    iq.setPayload(stz)
-    iq.send(now=True, block=False)
-    return True
-
   # Game management
 
   def storeGame(self, sid, name, ip, mapName, mapSize, victoryCondition, nbp, tnbp, players, state='init'):
@@ -281,21 +221,18 @@ if __name__ == '__main__':
   optp.add_option('-n', '--nickname', help='set xpartamupp nickname',
                   action='store', dest='xnickname',
                   default="XpartaMuCC")
-  optp.add_option('-D', '--demo', help='set xpartamupp in DEMO mode (add a few fake games)',
-                  action='store_true', dest='xdemomode',
-                  default=False)
+  optp.add_option('-r', '--room', help='set muc room to join',
+                  action='store', dest='xroom',
+                  default="arena")
 
   opts, args = optp.parse_args()
-
-  # Set DEMO mode
-  configDEMOModOn = opts.xdemomode
 
   # Setup logging.
   logging.basicConfig(level=opts.loglevel,
                       format='%(levelname)-8s %(message)s')
 
   # XpartaMuPP
-  xmpp = XpartaMuPP(opts.xlogin+'@'+opts.xdomain+'/CC', opts.xpassword, 'arena@conference.'+opts.xdomain, opts.xnickname)
+  xmpp = XpartaMuPP(opts.xlogin+'@'+opts.xdomain+'/CC', opts.xpassword, opts.xroom+'@conference.'+opts.xdomain, opts.xnickname)
   xmpp.register_plugin('xep_0030') # Service Discovery
   xmpp.register_plugin('xep_0004') # Data Forms
   xmpp.register_plugin('xep_0045') # Multi-User Chat	# used
@@ -306,9 +243,9 @@ if __name__ == '__main__':
     xmpp.process(block=False)
     while True:
       time.sleep(5)
-      logging.debug('Send GameList')
-      for to in xmpp.m_xmppIdToNick:
-        xmpp.sendGameList(to)
+      if not len(xmpp.m_gameList):
+        logging.debug('Send GameList')
+        for to in xmpp.m_xmppIdToNick:
+          xmpp.sendGameList(to)
   else:
     logging.error("Unable to connect")
-
