@@ -243,7 +243,7 @@ if __name__ == '__main__':
     xmpp.process(block=False)
     while True:
       time.sleep(5)
-      if not len(xmpp.m_gameList):
+      if len(xmpp.m_gameList):
         logging.debug('Send GameList')
         for to in xmpp.m_xmppIdToNick:
           xmpp.sendGameList(to)
